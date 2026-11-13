@@ -3,6 +3,6 @@ uvicorn
 sqlalchemy
 psycopg[binary]
 geoalchemy2
-paho-mqtt
+paho-mqtt>=2
 pydantic-settings
 ortools

@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint-python:
+    name: lint-python
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install ruff
+      - name: ruff check
+        run: ruff check Backend/
+
+  lint-js:
+    name: lint-js
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+      - name: ESLint (only where a package.json exists)
+        run: |
+          for dir in Frontend/Web Frontend/Mobile; do
+            if [ -f "$dir/package.json" ]; then
+              echo "Linting $dir"
+              (cd "$dir" && npm install && npx eslint .)
+            else
+              echo "no frontend yet, skipping ($dir)"
+            fi
+          done
+
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Create .env from the example
+        run: cp .env.example .env
+      - name: Make dev certs and MQTT passwords
+        run: |
+          bash Infra/mosquitto/make-dev-certs.sh
+          bash Infra/mosquitto/make-passwords.sh
+      - name: Start db, mqtt and backend
+        run: docker compose up -d --build --wait
+      - name: Run tests (including MQTT integration tests)
+        run: docker compose exec -T -e MQTT_TESTS_REQUIRED=1 backend pytest -v
+      - name: Show logs if something failed
+        if: failure()
+        run: docker compose logs
+      - name: Stop the stack
+        if: always()
+        run: docker compose down -v

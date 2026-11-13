@@ -1,0 +1,10 @@
+# Who can read/write which topics.
+
+# Devices: the username is the bin id (e.g. bin-001).
+# A device can only publish to its own topic: bins/bin-001/...
+pattern write bins/%u/#
+
+# Backend: reads every bin.
+# This name must match MQTT_USER in .env.
+user smartbin-backend
+topic read bins/#
