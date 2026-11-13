@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+sqlalchemy
+psycopg[binary]
+geoalchemy2
+paho-mqtt
+pydantic-settings
+ortools

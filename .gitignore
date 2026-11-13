@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+build/
+dist/
+
+# PlatformIO
+.pio/
+.pioenvs/
+.piolibdeps/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# Expo / React Native
+.expo/
+.expo-shared/
+web-build/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Env files (keep the examples)
+.env
+.env.*
+!.env.example
+
+# Editors
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
