@@ -12,7 +12,7 @@
 3. Commit as you go. Commit messages are free style. Mentioning the ticket key
    (e.g. `SB-12 add MQTT client`) is encouraged but not required.
 4. Push the branch and open a pull request into `main`. Fill in the PR template.
-5. CI must pass (lint-python, lint-js, test) and the branch must be up to date with `main`.
+5. CI must pass (the required checks in `.github/workflows/ci.yml`) and the branch must be up to date with `main`.
    An approval is not required, but asking a teammate to look at it is encouraged.
 6. Merge, then delete the branch.
 

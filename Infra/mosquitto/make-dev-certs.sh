@@ -27,4 +27,8 @@ openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial \
 
 rm -f server.csr server.ext ca.srl
 
+# Mosquitto runs as its own user inside the container, so on Linux/macOS it
+# cannot read a key that only you can read. Fine for a dev-only key.
+chmod 644 server.key
+
 echo "DEV ONLY certs created in Infra/mosquitto/certs/ (ca.crt, server.crt, server.key)"

@@ -4,6 +4,7 @@ Stub for now: it prints the messages instead of publishing them.
 TODO: connect with paho-mqtt using the MQTT_* values from .env.
 Run from Backend/: python simulator/simulate.py
 """
+
 import json
 import random
 import time
