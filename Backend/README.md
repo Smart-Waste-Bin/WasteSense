@@ -10,13 +10,18 @@ Python side of SmartBin.
 
 ## Setup
 
+The easy way is Docker: see "Local setup" in the root README (`docker compose up`).
+Settings come from the root `.env` (copy `.env.example` in the repo root), loaded in `app/config.py`.
+
+To run without Docker:
+
 ```bash
 cd Backend
 python -m venv .venv
 .venv\Scripts\activate          # Windows
 # source .venv/bin/activate     # macOS / Linux
-pip install -r requirements.txt
-cp .env.example .env            # then fill in the values
+pip install -r requirements.txt -r requirements-dev.txt
+# in the root .env, set the db and mqtt hosts to localhost
 ```
 
 ## Run the API
@@ -37,3 +42,12 @@ python simulator/simulate.py
 ```
 
 Stop it with Ctrl+C.
+
+## Tests and lint
+
+```bash
+pytest          # MQTT tests are skipped if the broker is not running
+ruff check .
+```
+
+With Docker running: `docker compose exec backend pytest`.

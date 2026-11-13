@@ -7,6 +7,7 @@ venv/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.coverage
 build/
 dist/
 
@@ -29,6 +30,12 @@ web-build/
 *.p12
 *.key
 *.mobileprovision
+
+# Certs and MQTT passwords (made by the Infra/mosquitto scripts, never committed)
+*.pem
+*.crt
+Infra/mosquitto/certs/
+Infra/mosquitto/passwd
 
 # Env files (keep the examples)
 .env
