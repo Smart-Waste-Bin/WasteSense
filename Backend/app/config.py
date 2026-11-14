@@ -26,6 +26,10 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:5173,http://localhost:8081"
     osrm_url: str = "https://router.project-osrm.org"
 
+    seed_admin_password: str = ""
+    seed_supervisor_password: str = ""
+    seed_collector_password: str = ""
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]

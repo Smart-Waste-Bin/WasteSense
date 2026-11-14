@@ -1,0 +1,66 @@
+from logging.config import fileConfig
+
+from alembic import context
+from geoalchemy2.alembic_helpers import render_item
+from sqlalchemy import create_engine, pool
+
+from app.config import settings
+from app.models import Base
+
+config = context.config
+
+if config.config_file_name is not None:
+    fileConfig(config.config_file_name)
+
+target_metadata = Base.metadata
+
+# PostGIS's own tables, so autogenerate does not try to drop them.
+POSTGIS_SCHEMAS = {"tiger", "tiger_data", "topology"}
+POSTGIS_TABLES = {"spatial_ref_sys"}
+
+
+def include_name(name, type_, parent_names):
+    if type_ == "schema":
+        return name not in POSTGIS_SCHEMAS
+    if type_ == "table":
+        return name not in POSTGIS_TABLES and parent_names.get("schema_name") not in POSTGIS_SCHEMAS
+    return True
+
+
+def database_url() -> str:
+    return config.attributes.get("database_url") or settings.database_url
+
+
+def run_migrations_offline() -> None:
+    context.configure(
+        url=database_url(),
+        target_metadata=target_metadata,
+        literal_binds=True,
+        dialect_opts={"paramstyle": "named"},
+        include_name=include_name,
+    )
+    with context.begin_transaction():
+        context.run_migrations()
+
+
+def run_migrations_online() -> None:
+    engine = create_engine(database_url(), poolclass=pool.NullPool)
+    with engine.connect() as connection:
+        # The postgis image puts tiger/topology on the search_path; only look at public.
+        connection.exec_driver_sql("SET search_path TO public")
+        connection.commit()
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            include_name=include_name,
+            render_item=render_item,
+        )
+        with context.begin_transaction():
+            context.run_migrations()
+    engine.dispose()
+
+
+if context.is_offline_mode():
+    run_migrations_offline()
+else:
+    run_migrations_online()

@@ -1,0 +1,6 @@
+# TEST DATA ONLY. Made-up coordinates inside the Kumasi box, not real bin spots.
+id,name,lat,lon,depth_cm,volume_l,is_physical
+BIN-001,Test real bin 1,6.6700,-1.5700,100,240,true
+BIN-002,Test real bin 2,6.6710,-1.5710,100,240,true
+BIN-003,Test city bin 3,6.7000,-1.6200,100,240,false
+BIN-004,Test city bin 4,6.6500,-1.6000,100,240,false
