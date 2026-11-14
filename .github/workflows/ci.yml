@@ -3,12 +3,104 @@ name: CI
 on:
   push:
   pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      run_all:
+        description: "Run every check, even for folders that did not change"
+        type: boolean
+        default: false
+
+# A new push cancels the older run on the same branch.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
 
 # Python code lives in Backend/ (Backend/routing and Backend/simulator are inside it).
+# Only the checks for the folders that changed run, on every event (main included).
+# ci-ok at the bottom is the one check branch protection requires.
 
 jobs:
+  changes:
+    name: changes
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.areas.outputs.backend }}
+      firmware: ${{ steps.areas.outputs.firmware }}
+      frontend_apps: ${{ steps.areas.outputs.frontend_apps }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Pick what to compare against
+        id: base
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          # On a push, compare with the commit before the push.
+          # New branch (no "before") or a force push (old commit gone): compare with main.
+          if [ "${{ github.event_name }}" = push ] && [ -n "$BEFORE" ]              && [ "$BEFORE" != 0000000000000000000000000000000000000000 ]              && git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            echo "base=$BEFORE" >> "$GITHUB_OUTPUT"
+          else
+            echo "base=main" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: dorny/paths-filter@v3
+        id: filter
+        if: ${{ !inputs.run_all }}
+        with:
+          # Ignored on pull requests: those always compare with the PR's base branch.
+          base: ${{ steps.base.outputs.base }}
+          filters: |
+            backend:
+              - 'Backend/**'
+              - 'pyproject.toml'
+              - 'ruff.toml'
+              - 'requirements*.txt'
+            web:
+              - 'Frontend/Web/**'
+            mobile:
+              - 'Frontend/Mobile/**'
+            firmware:
+              - 'Firmware/**'
+            shared:
+              - 'docker-compose.yml'
+              - '.github/**'
+              - '.env.example'
+      - name: Decide which checks run
+        id: areas
+        env:
+          RUN_ALL: ${{ inputs.run_all && 'true' || 'false' }}
+          SHARED: ${{ steps.filter.outputs.shared }}
+          BACKEND: ${{ steps.filter.outputs.backend }}
+          WEB: ${{ steps.filter.outputs.web }}
+          MOBILE: ${{ steps.filter.outputs.mobile }}
+          FIRMWARE: ${{ steps.filter.outputs.firmware }}
+        run: |
+          # An area runs if it changed, if a shared file changed, or on a run_all manual run.
+          runs() {
+            if [ "$RUN_ALL" = true ] || [ "$SHARED" = true ] || [ "$1" = true ]; then
+              echo true
+            else
+              echo false
+            fi
+          }
+          apps=""
+          [ "$(runs "$WEB")" = true ] && apps="\"Web\""
+          [ "$(runs "$MOBILE")" = true ] && apps="${apps:+$apps,}\"Mobile\""
+          {
+            echo "backend=$(runs "$BACKEND")"
+            echo "firmware=$(runs "$FIRMWARE")"
+            echo "frontend_apps=[$apps]"
+          } | tee -a "$GITHUB_OUTPUT"
+
   lint-python:
     name: lint-python
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -23,6 +115,8 @@ jobs:
 
   typecheck-python:
     name: typecheck-python
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -38,6 +132,8 @@ jobs:
 
   test:
     name: test
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -58,6 +154,8 @@ jobs:
 
   migrations:
     name: migrations
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -86,14 +184,24 @@ jobs:
 
   docker-build:
     name: docker-build
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - run: cp .env.example .env
-      - run: docker compose build backend
+      - name: docker compose build backend
+        run: |
+          if [ ! -f docker-compose.yml ] || [ ! -f Backend/Dockerfile ]; then
+            echo "no docker-compose.yml or Backend/Dockerfile yet, skipping"
+            exit 0
+          fi
+          cp .env.example .env
+          docker compose build backend
 
   firmware:
     name: firmware
+    needs: changes
+    if: needs.changes.outputs.firmware == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -102,20 +210,36 @@ jobs:
           python-version: "3.12"
       - uses: actions/cache@v4
         with:
-          path: ~/.platformio
+          path: |
+            ~/.platformio
+            Firmware/.pio
           key: platformio-${{ hashFiles('Firmware/platformio.ini') }}
-      - run: pip install platformio
+      - name: Check for platformio.ini
+        id: check
+        run: |
+          if [ -f Firmware/platformio.ini ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "no platformio.ini yet, skipping"
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.check.outputs.found == 'true'
+        run: pip install platformio
       - name: pio run
+        if: steps.check.outputs.found == 'true'
         working-directory: Firmware
         run: pio run
 
   frontend:
     name: frontend (${{ matrix.app }})
+    needs: changes
+    # Only the apps whose folder changed are in the matrix (Web, Mobile, both or none).
+    if: needs.changes.outputs.frontend_apps != '[]'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        app: [Web, Mobile]
+        app: ${{ fromJSON(needs.changes.outputs.frontend_apps) }}
     defaults:
       run:
         working-directory: Frontend/${{ matrix.app }}
@@ -147,3 +271,20 @@ jobs:
       - name: npm run build (Web only)
         if: steps.check.outputs.found == 'true' && matrix.app == 'Web'
         run: npm run build --if-present
+
+  # The only check branch protection requires. Skipped checks count as OK.
+  ci-ok:
+    name: ci-ok
+    needs: [changes, lint-python, typecheck-python, test, migrations, docker-build, firmware, frontend]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if any check failed or was cancelled
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "results: $RESULTS"
+          case " $RESULTS " in
+            *" failure "*|*" cancelled "*) echo "a check failed"; exit 1 ;;
+          esac
+          echo "all checks passed or were skipped"
