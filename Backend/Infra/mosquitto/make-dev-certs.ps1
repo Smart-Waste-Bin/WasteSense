@@ -1,7 +1,7 @@
 # DEVELOPMENT ONLY. PowerShell version of make-dev-certs.sh.
 # Makes a self-signed CA and a server cert for the local broker.
 # Needs openssl: it comes with Git for Windows (C:\Program Files\Git\usr\bin\openssl.exe).
-# Run from the repo root: .\Infra\mosquitto\make-dev-certs.ps1
+# Run from the repo root: .\Backend\Infra\mosquitto\make-dev-certs.ps1
 $ErrorActionPreference = "Stop"
 
 $openssl = (Get-Command openssl -ErrorAction SilentlyContinue).Source
@@ -29,4 +29,4 @@ Run @("x509", "-req", "-in", "server.csr", "-CA", "ca.crt", "-CAkey", "ca.key", 
 
 Remove-Item server.csr, server.ext, ca.srl -ErrorAction SilentlyContinue
 
-Write-Host "DEV ONLY certs created in Infra/mosquitto/certs/ (ca.crt, server.crt, server.key)"
+Write-Host "DEV ONLY certs created in Backend/Infra/mosquitto/certs/ (ca.crt, server.crt, server.key)"

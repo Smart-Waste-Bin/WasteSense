@@ -31,11 +31,11 @@ web-build/
 *.key
 *.mobileprovision
 
-# Certs and MQTT passwords (made by the Infra/mosquitto scripts, never committed)
+# Certs and MQTT passwords (made by the Backend/Infra/mosquitto scripts, never committed)
 *.pem
 *.crt
-Infra/mosquitto/certs/
-Infra/mosquitto/passwd
+Backend/Infra/mosquitto/certs/
+Backend/Infra/mosquitto/passwd
 
 # Env files (keep the examples)
 .env

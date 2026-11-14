@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # DEVELOPMENT ONLY. Makes a self-signed CA and a server cert for the local broker.
 # Never use these certs on a real deployment.
-# Output: Infra/mosquitto/certs/ (gitignored)
-# Run from the repo root: bash Infra/mosquitto/make-dev-certs.sh
+# Output: Backend/Infra/mosquitto/certs/ (gitignored)
+# Run from the repo root: bash Backend/Infra/mosquitto/make-dev-certs.sh
 set -euo pipefail
 
 # Stop Git Bash on Windows from rewriting "/CN=..." into a file path
@@ -31,4 +31,4 @@ rm -f server.csr server.ext ca.srl
 # cannot read a key that only you can read. Fine for a dev-only key.
 chmod 644 server.key
 
-echo "DEV ONLY certs created in Infra/mosquitto/certs/ (ca.crt, server.crt, server.key)"
+echo "DEV ONLY certs created in Backend/Infra/mosquitto/certs/ (ca.crt, server.crt, server.key)"

@@ -1,6 +1,6 @@
 # Local dev stack: database, MQTT broker and backend.
 # Before the first start: cp .env.example .env, then run the two scripts in
-# Infra/mosquitto/ (see README "Local setup").
+# Backend/Infra/mosquitto/ (see README "Local setup").
 
 services:
   db:
@@ -28,7 +28,7 @@ services:
       - "1883:1883"   # plain, dev only, password still required
       - "8883:8883"   # TLS
     volumes:
-      - ./Infra/mosquitto:/mosquitto/config
+      - ./Backend/Infra/mosquitto:/mosquitto/config
       - mqtt-data:/mosquitto/data
     healthcheck:
       test: ["CMD-SHELL", "nc -z localhost 1883 || exit 1"]

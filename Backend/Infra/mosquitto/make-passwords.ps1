@@ -1,7 +1,7 @@
 # PowerShell version of make-passwords.sh.
-# Run from the repo root: .\Infra\mosquitto\make-passwords.ps1
+# Run from the repo root: .\Backend\Infra\mosquitto\make-passwords.ps1
 $ErrorActionPreference = "Stop"
-Set-Location (Join-Path $PSScriptRoot "..\..")
+Set-Location (Join-Path $PSScriptRoot "..\..\..")
 
 if (-not (Test-Path .env)) {
     Write-Error "No .env found. Run: Copy-Item .env.example .env"
@@ -21,5 +21,5 @@ $script = 'set -e; f=/mosquitto/config/passwd; rm -f "$f"; touch "$f"; mosquitto
 docker compose run --rm --no-deps --entrypoint sh mqtt -c $script sh $backendUser $backendPassword $devicePassword
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-Write-Host "Created Infra/mosquitto/passwd with users: $backendUser, bin-001, bin-002"
+Write-Host "Created Backend/Infra/mosquitto/passwd with users: $backendUser, bin-001, bin-002"
 Write-Host "If the broker is already running: docker compose restart mqtt"
