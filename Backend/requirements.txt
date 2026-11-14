@@ -6,3 +6,5 @@ geoalchemy2
 paho-mqtt>=2
 pydantic-settings
 ortools
+alembic
+pwdlib[argon2]
