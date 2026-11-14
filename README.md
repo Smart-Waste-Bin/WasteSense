@@ -20,8 +20,7 @@ Each folder will get its own README with setup steps once code is added.
 This starts the database (PostgreSQL + PostGIS), the MQTT broker and the backend with one command.
 
 1. Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) and [Git](https://git-scm.com/).
-   On Windows, run the commands below in **Git Bash** (comes with Git) or WSL.
-   PowerShell versions of the two scripts are also given.
+   On Windows, the commands below work in PowerShell, Git Bash or WSL.
 
 2. Clone the repo:
    ```bash
@@ -29,28 +28,26 @@ This starts the database (PostgreSQL + PostGIS), the MQTT broker and the backend
    cd WasteSense
    ```
 
-3. Create your settings file and fill in the values (pick your own passwords):
+3. Get the settings file. Ask the team for the shared `.env` and put it in the repo root
+   (it is never committed). Working alone? Make your own and pick your own passwords:
    ```bash
    cp .env.example .env
    ```
    The root `.env` is the only settings file. Docker and the backend both read it.
 
-4. Make the dev TLS certs and the MQTT passwords:
-   ```bash
-   bash Backend/Infra/mosquitto/make-dev-certs.sh
-   bash Backend/Infra/mosquitto/make-passwords.sh
-   ```
-   PowerShell: `.\Backend\Infra\mosquitto\make-dev-certs.ps1` and `.\Backend\Infra\mosquitto\make-passwords.ps1`.
-   The certs are self-signed and for development only. Re-run `make-passwords` whenever you
-   change an MQTT password in `.env`, then `docker compose restart mqtt`.
-
-5. Start everything:
+4. Start everything:
    ```bash
    docker compose up
    ```
-   The first start takes a few minutes while images download.
+   The first start takes a few minutes while images download. A one-off `mqtt-setup` container
+   runs first: it makes the dev TLS certs (if missing) and the broker's password file from `.env`,
+   then exits. If you change an MQTT password in `.env`, run `docker compose down` and then
+   `docker compose up` so the broker picks it up.
 
-6. Check it works (in a second terminal):
+   The scripts in `Backend/Infra/mosquitto/` (`make-dev-certs`, `make-passwords`) still work if you
+   want to make these files by hand.
+
+5. Check it works (in a second terminal):
    - Open http://localhost:8000/health. It should show `{"status":"ok"}`.
    - Publish as a test device, with a password. This works (no output, no error):
      ```bash
@@ -62,7 +59,7 @@ This starts the database (PostgreSQL + PostGIS), the MQTT broker and the backend
      docker compose exec mqtt mosquitto_pub -h localhost -t bins/bin-001/fill -m 42
      ```
 
-7. Run the tests:
+6. Run the tests:
    ```bash
    docker compose exec backend pytest
    ```

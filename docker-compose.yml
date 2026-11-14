@@ -1,6 +1,6 @@
 # Local dev stack: database, MQTT broker and backend.
-# Before the first start: cp .env.example .env, then run the two scripts in
-# Backend/Infra/mosquitto/ (see README "Local setup").
+# Before the first start: put the team .env in the repo root (or cp .env.example .env).
+# The mqtt-setup service makes the broker's certs and passwords for you.
 
 services:
   db:
@@ -22,8 +22,19 @@ services:
       timeout: 5s
       retries: 20
 
+  # One-off job: makes dev certs (if missing) and the passwd file from .env, then exits.
+  mqtt-setup:
+    image: eclipse-mosquitto:2
+    entrypoint: ["sh", "/mosquitto/config/setup.sh"]
+    env_file: .env
+    volumes:
+      - ./Backend/Infra/mosquitto:/mosquitto/config
+
   mqtt:
     image: eclipse-mosquitto:2
+    depends_on:
+      mqtt-setup:
+        condition: service_completed_successfully
     ports:
       - "1883:1883"   # plain, dev only, password still required
       - "8883:8883"   # TLS
