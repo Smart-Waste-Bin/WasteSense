@@ -10,7 +10,7 @@ Smart Waste Bin is a low-cost IoT system that tells waste collectors which bins 
 | `Backend/` | The server and API. Receives data from the bins, stores it in the database and serves it to the web and mobile apps. |
 | `Backend/Infra/mosquitto/` | MQTT broker config, ACL and the scripts that make dev passwords and certs. |
 | `Frontend/` | The user-facing apps. |
-| `Frontend/Web/` | Web dashboard for monitoring the bins. |
+| `Frontend/web/` | Web dashboard for monitoring the bins. |
 | `Frontend/Mobile/` | Mobile app for users and collectors. |
 
 Each folder will get its own README with setup steps once code is added.
