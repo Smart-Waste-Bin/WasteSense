@@ -1,0 +1,12 @@
+id,name,lat,lon,depth_cm,volume_l,is_physical
+BIN-001,KNUST - SmartBin prototype,6.672956,-1.565147,100,240,true
+BIN-002,Kejetia Market,6.698635,-1.619140,100,240,false
+BIN-003,Adum Central Market area,6.6919,-1.6287,100,240,false
+BIN-004,Asafo Market,6.68806,-1.61556,100,240,false
+BIN-005,Bantama Market,6.70322,-1.63487,100,240,false
+BIN-006,Suame Magazine,6.7194,-1.6344,100,240,false
+BIN-007,Tafo Market,6.73583,-1.60806,100,240,false
+BIN-008,Ayigya,6.6897734,-1.5726539,100,240,false
+BIN-009,Atonsu,6.64694,-1.60889,100,240,false
+BIN-010,Asawasi Market,6.7026,-1.6045,100,240,false
+BIN-011,Kwadaso,6.6917444,-1.6515167,100,240,false

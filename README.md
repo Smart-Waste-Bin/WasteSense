@@ -59,10 +59,36 @@ This starts the database (PostgreSQL + PostGIS), the MQTT broker and the backend
      docker compose exec mqtt mosquitto_pub -h localhost -t bins/bin-001/fill -m 42
      ```
 
-6. Run the tests:
+6. Build the database tables and load the sample data (users, truck, Kumasi bins, depot, settings):
+   ```bash
+   docker compose exec backend alembic upgrade head
+   docker compose exec backend python -m scripts.seed
+   ```
+   The seed user passwords are the `SEED_*_PASSWORD` values in `.env`. The bins and depot come
+   from `Backend/scripts/data/bins.csv` and `depot.json`; the seed refuses to run while they still
+   have `PLACEHOLDER` or `CHECK` coordinates. Running the seed again is safe: it updates the rows, it does
+   not duplicate them.
+   See `Docs/database/README.md` for what each table stores.
+
+7. Run the tests:
    ```bash
    docker compose exec backend pytest
    ```
+
+### Changing the database
+
+1. Change or add models in `Backend/app/models/` (new model files must be imported in
+   `Backend/app/models/__init__.py`).
+2. Make a migration:
+   ```bash
+   docker compose exec backend alembic revision --autogenerate -m "add xyz to bins"
+   ```
+3. **Always read and fix the generated file in `Backend/alembic/versions/` before committing.**
+   Autogenerate misses or gets wrong: CHECK constraints, partial indexes, PostGIS columns,
+   server defaults, and renames (it sees a drop + add, which loses data).
+4. Apply it with `docker compose exec backend alembic upgrade head`, and check it can be undone:
+   `alembic downgrade -1`, then `alembic upgrade head` again.
+5. `docker compose exec backend alembic check` must say no new operations (CI runs it).
 
 To stop: `docker compose down`. To also wipe the database: `docker compose down -v`.
 

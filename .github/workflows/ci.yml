@@ -45,9 +45,9 @@ jobs:
         run: cp .env.example .env
       - name: Start db, mqtt and backend
         run: docker compose up -d --build --wait
-      - name: Run tests with coverage (Backend/tests and Backend/routing/tests, MQTT tests included)
+      - name: Run tests with coverage (Backend/tests and Backend/routing/tests, MQTT and DB tests included)
         run: >
-          docker compose exec -T -e MQTT_TESTS_REQUIRED=1 backend
+          docker compose exec -T -e MQTT_TESTS_REQUIRED=1 -e DB_TESTS_REQUIRED=1 backend
           pytest -v --cov=app --cov=routing --cov-report=term-missing
       - name: Show logs if something failed
         if: failure()
