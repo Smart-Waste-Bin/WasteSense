@@ -43,10 +43,6 @@ jobs:
       - uses: actions/checkout@v5
       - name: Create .env from the example
         run: cp .env.example .env
-      - name: Make dev certs and MQTT passwords
-        run: |
-          bash Infra/mosquitto/make-dev-certs.sh
-          bash Infra/mosquitto/make-passwords.sh
       - name: Start db, mqtt and backend
         run: docker compose up -d --build --wait
       - name: Run tests with coverage (Backend/tests and Backend/routing/tests, MQTT tests included)
@@ -78,8 +74,6 @@ jobs:
         if: steps.check.outputs.found == 'true'
         run: |
           cp .env.example .env
-          bash Infra/mosquitto/make-dev-certs.sh
-          bash Infra/mosquitto/make-passwords.sh
           docker compose up -d --build --wait
       - name: alembic upgrade head, then alembic check
         if: steps.check.outputs.found == 'true'

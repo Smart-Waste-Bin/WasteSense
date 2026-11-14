@@ -1,10 +1,10 @@
 # This is NOT the real password file.
 #
-# The real file is Infra/mosquitto/passwd. It is gitignored and never committed.
+# The real file is Backend/Infra/mosquitto/passwd. It is gitignored and never committed.
 # Create it with:
 #
-#   bash Infra/mosquitto/make-passwords.sh        (Git Bash, macOS, Linux)
-#   .\Infra\mosquitto\make-passwords.ps1          (PowerShell)
+#   bash Backend/Infra/mosquitto/make-passwords.sh        (Git Bash, macOS, Linux)
+#   .\Backend\Infra\mosquitto\make-passwords.ps1          (PowerShell)
 #
 # The script runs mosquitto_passwd inside the mosquitto container and adds:
 #   - the backend user      (MQTT_USER / MQTT_PASSWORD from .env)
