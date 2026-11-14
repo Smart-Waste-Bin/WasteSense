@@ -115,7 +115,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        app: [web, Mobile]
+        app: [Web, Mobile]
     defaults:
       run:
         working-directory: Frontend/${{ matrix.app }}
