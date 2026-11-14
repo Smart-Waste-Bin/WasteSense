@@ -1,6 +1,6 @@
 # WasteSense
 
-Smart waste bin project. The repo is split into three parts:
+Smart Waste Bin is a low-cost IoT system that tells waste collectors which bins are full and plans the shortest route to empty only those bins.. The repo is split into three parts:
 
 ## Folders
 
@@ -10,7 +10,7 @@ Smart waste bin project. The repo is split into three parts:
 | `Backend/` | The server and API. Receives data from the bins, stores it in the database and serves it to the web and mobile apps. |
 | `Backend/Infra/mosquitto/` | MQTT broker config, ACL and the scripts that make dev passwords and certs. |
 | `Frontend/` | The user-facing apps. |
-| `Frontend/Web/` | Web dashboard for monitoring the bins. |
+| `Frontend/web/` | Web dashboard for monitoring the bins. |
 | `Frontend/Mobile/` | Mobile app for users and collectors. |
 
 Each folder will get its own README with setup steps once code is added.
@@ -92,3 +92,31 @@ This starts the database (PostgreSQL + PostGIS), the MQTT broker and the backend
 
 To stop: `docker compose down`. To also wipe the database: `docker compose down -v`.
 
+
+## CI
+
+GitHub Actions runs `.github/workflows/ci.yml` on every push, on every pull request into `main`,
+and when started by hand.
+
+Only the checks for the folders that changed run. This is true everywhere, `main` included.
+Checks for folders you didn't touch show as "skipped", and skipped counts as passing.
+If you change `docker-compose.yml`, `.env.example` or anything in `.github/`, every check runs.
+
+| Check | What it does | Runs when this changes |
+| --- | --- | --- |
+| `lint-python` | Runs `ruff check` and `ruff format --check` on the Python code. | `Backend/` |
+| `typecheck-python` | Runs `mypy` with the config in `Backend/pyproject.toml`. | `Backend/` |
+| `test` | Starts the database, broker and backend with Docker and runs `pytest` with coverage. | `Backend/` |
+| `migrations` | Runs `alembic upgrade head` then `alembic check` against a fresh database. | `Backend/` |
+| `docker-build` | Builds the backend Docker image. | `Backend/` |
+| `firmware` | Compiles the firmware with `pio run` (no board needed). | `Firmware/` |
+| `frontend (Web)` | Runs the web app's npm scripts. | `Frontend/Web/` |
+| `frontend (Mobile)` | Runs the mobile app's npm scripts. | `Frontend/Mobile/` |
+
+The last job, `ci-ok`, fails if any of the checks above failed. It is the only check
+branch protection requires, so a failing check blocks the merge into `main`.
+
+Frontend: CI runs the npm scripts lint, typecheck, test and build (Web only) if they exist in package.json.
+
+To run everything (e.g. before a demo or at the end of a sprint): go to
+Actions -> CI -> Run workflow, and set `run_all` to true.

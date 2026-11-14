@@ -10,5 +10,9 @@ SB-
 
 -
 
+## Checklist
+
+- [ ] Tests added or updated for this change
+
 ## Screenshots (if UI)
 
