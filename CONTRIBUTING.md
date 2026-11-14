@@ -24,7 +24,7 @@ A failing CI run blocks the merge.
 | Area | Owner |
 | --- | --- |
 | `Backend/` (API, routing, simulator) | Joshua |
-| `Frontend/Web/`, `Frontend/Mobile/` | Nana |
+| `Frontend/web/`, `Frontend/Mobile/` | Nana |
 | `Firmware/` | Mujahid |
 
 Ask the owner before making big changes in their folder.
