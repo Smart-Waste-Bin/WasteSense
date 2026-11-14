@@ -1,6 +1,6 @@
 # WasteSense
 
-Smart waste bin project. The repo is split into three parts:
+Smart Waste Bin is a low-cost IoT system that tells waste collectors which bins are full and plans the shortest route to empty only those bins.. The repo is split into three parts:
 
 ## Folders
 
