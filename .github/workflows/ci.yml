@@ -60,6 +60,8 @@ jobs:
               - 'pyproject.toml'
               - 'ruff.toml'
               - 'requirements*.txt'
+              - 'Docs/contract/**'
+              - 'Docs/contract.md'
             web:
               - 'Frontend/Web/**'
             mobile:

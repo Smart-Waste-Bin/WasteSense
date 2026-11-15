@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Reading (MQTT bins/{bin_id}/readings), contract v1.0",
+  "description": "ts is only checked as a string here. Parsing and the 5-minute future rule give bad_timestamp (see contract section 4).",
+  "type": "object",
+  "required": [
+    "bin_id",
+    "fill",
+    "distance_cm",
+    "battery",
+    "rssi",
+    "seq",
+    "ts",
+    "fw"
+  ],
+  "properties": {
+    "bin_id": {
+      "type": "string",
+      "pattern": "^BIN-[0-9]{3,}$"
+    },
+    "fill": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "distance_cm": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "battery": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 100
+    },
+    "rssi": {
+      "type": "integer",
+      "exclusiveMaximum": 0
+    },
+    "seq": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "ts": {
+      "type": "string"
+    },
+    "fw": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

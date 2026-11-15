@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "validation_error",
+    "message": "size must be between 1 and 100."
+  }
+}

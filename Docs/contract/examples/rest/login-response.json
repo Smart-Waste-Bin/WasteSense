@@ -1,0 +1,11 @@
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5YTJjNGU2Zi0xYjNkLTRmNTgtYTdjOS0wZTJiNGQ2ZjhhMTAiLCJyb2xlIjoic3VwZXJ2aXNvciIsImV4cCI6MTc5NDA0NjYwMH0.signature",
+  "token_type": "bearer",
+  "expires_in": 28800,
+  "user": {
+    "id": "9a2c4e6f-1b3d-4f58-a7c9-0e2b4d6f8a10",
+    "name": "Supervisor",
+    "email": "supervisor@smartbin.test",
+    "role": "supervisor"
+  }
+}

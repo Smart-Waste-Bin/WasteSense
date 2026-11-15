@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Emptied (MQTT bins/{bin_id}/emptied), contract v1.0",
+  "type": "object",
+  "required": [
+    "bin_id",
+    "emptied_at",
+    "route_id"
+  ],
+  "properties": {
+    "bin_id": {
+      "type": "string",
+      "pattern": "^BIN-[0-9]{3,}$"
+    },
+    "emptied_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "route_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid"
+    }
+  }
+}

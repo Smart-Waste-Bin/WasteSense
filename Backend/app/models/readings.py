@@ -50,6 +50,8 @@ class RejectedReading(Base):
     __tablename__ = "rejected_readings"
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
+    # The MQTT topic it came in on. Needed for "malformed" (bin_id doesn't match the topic).
+    topic: Mapped[str | None] = mapped_column(Text)
     raw: Mapped[Any] = mapped_column(JSONB)
     reason: Mapped[str] = mapped_column(Text)
     received_at: Mapped[datetime] = mapped_column(

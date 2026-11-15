@@ -48,15 +48,15 @@ This starts the database (PostgreSQL + PostGIS), the MQTT broker and the backend
    want to make these files by hand.
 
 5. Check it works (in a second terminal):
-   - Open http://localhost:8000/health. It should show `{"status":"ok"}`.
+   - Open http://localhost:8000/api/health. It should show `{"status":"ok"}`.
    - Publish as a test device, with a password. This works (no output, no error):
      ```bash
-     docker compose exec mqtt mosquitto_pub -h localhost -u bin-001 -P change-me-device -t bins/bin-001/fill -m 42
+     docker compose exec mqtt mosquitto_pub -h localhost -u BIN-001 -P change-me-device -t bins/BIN-001/readings -m 42
      ```
      Use your `MQTT_TEST_DEVICE_PASSWORD` from `.env` in place of `change-me-device`.
    - Publish with no password. The broker refuses it (`Connection Refused: not authorised`):
      ```bash
-     docker compose exec mqtt mosquitto_pub -h localhost -t bins/bin-001/fill -m 42
+     docker compose exec mqtt mosquitto_pub -h localhost -t bins/BIN-001/readings -m 42
      ```
 
 6. Build the database tables and load the sample data (users, truck, Kumasi bins, depot, settings):

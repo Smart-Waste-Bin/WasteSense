@@ -1,0 +1,20 @@
+{
+  "id": "BIN-001",
+  "name": "KNUST - SmartBin prototype",
+  "location": {
+    "lat": 6.672956,
+    "lon": -1.565147
+  },
+  "depth_cm": 100,
+  "volume_l": 240,
+  "sensor_id": null,
+  "status": "due",
+  "maintenance": false,
+  "is_physical": true,
+  "due_threshold": null,
+  "urgent_threshold": null,
+  "last_fill": 72,
+  "last_battery": 95,
+  "last_seen_at": "2026-11-07T08:30:00Z",
+  "created_at": "2026-11-01T10:00:00Z"
+}
