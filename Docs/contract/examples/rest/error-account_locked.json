@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "account_locked",
+    "message": "Too many failed logins. Try again after 08:10 UTC (in 10 minutes)."
+  }
+}

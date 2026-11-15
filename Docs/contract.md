@@ -7,10 +7,10 @@ to each other. If the code and this file disagree, this file wins and the code g
 
 | | |
 | --- | --- |
-| Version | 1.0 |
+| Version | 1.1 |
 | Date | 2026-11-15 |
 | Status | Draft - awaiting approval |
-| Ticket | SET-03 (FR-04, FR-15) |
+| Tickets | SET-03 (FR-04, FR-15), AUTH-01 (FR-24, FR-26, FR-27) |
 
 ### Approval
 
@@ -28,6 +28,13 @@ to each other. If the code and this file disagree, this file wins and the code g
   that breaks old code (a renamed or removed field, a new required field).
 - Update the examples in `Docs/contract/examples/` in the same PR. `Backend/tests/test_contract.py`
   fails if an example and its schema disagree.
+
+### Changes
+
+| Version | Ticket | What changed |
+| --- | --- | --- |
+| 1.0 | SET-03 | First version. |
+| 1.1 | AUTH-01 | Login takes `login` (email or phone) instead of `email`. Access tokens last 60 minutes, plus refresh tokens (`/api/auth/refresh`, `/api/auth/logout`). `user` has `phone`. New error codes for auth, and 423 for a locked account. Write rule for roles (section 6): bin create/delete and truck writes are now admin and supervisor. 1.0 was never approved and no code used its login, so the renamed field is 1.1, not 2.0. |
 
 ## 1. Naming and common rules
 
@@ -375,14 +382,30 @@ A late reading still updates the bin's history, but it does not change `last_fil
 
 ### Auth
 
-Send `Authorization: Bearer <JWT>` on every request. Only two endpoints work without it:
-`POST /api/auth/login` and `GET /api/health`.
+Send `Authorization: Bearer <access token>` on every request. Only three endpoints work without it:
+`POST /api/auth/login`, `POST /api/auth/refresh` (it is used when the access token has expired)
+and `GET /api/health`.
 
-`POST /api/auth/login`. Request (file `rest/login-request.json`):
+There are two tokens:
+
+| Token | What it is | Lifetime | Where the app keeps it |
+| --- | --- | --- | --- |
+| Access token | A JWT (HS256). Sent as `Authorization: Bearer ...` and as `?token=` on the WebSocket. | 60 minutes (`ACCESS_TOKEN_MINUTES`) | In memory |
+| Refresh token | A random string, not a JWT. Only used with `/api/auth/refresh` and `/api/auth/logout`. The server stores only its SHA-256 hash. | 7 days (`REFRESH_TOKEN_DAYS`) | Web: the `refresh_token` cookie (httpOnly, the page can't read it). Mobile: secure storage, from the response body. |
+
+The access token's claims are `sub` (user id), `role`, `type` (`"access"`), `iat`, `exp` and `jti`.
+Apps don't need to read them: use `GET /api/me` for the user.
+
+#### `POST /api/auth/login`
+
+`login` is an email or a Ghana phone number. Email is not case sensitive. A phone can be written
+`0241234567`, `024 123 4567`, `233241234567` or `+233241234567`; it is stored and returned as `+233241234567`.
+
+Request (file `rest/login-request.json`):
 
 ```json
 {
-  "email": "supervisor@smartbin.test",
+  "login": "0241234567",
   "password": "change-me-supervisor"
 }
 ```
@@ -391,20 +414,120 @@ Response `200` (file `rest/login-response.json`):
 
 ```json
 {
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5YTJjNGU2Zi0xYjNkLTRmNTgtYTdjOS0wZTJiNGQ2ZjhhMTAiLCJyb2xlIjoic3VwZXJ2aXNvciIsImV4cCI6MTc5NDA0NjYwMH0.signature",
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5YTJjNGU2Zi0xYjNkLTRmNTgtYTdjOS0wZTJiNGQ2ZjhhMTAiLCJyb2xlIjoic3VwZXJ2aXNvciIsInR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3OTQwMzg0MDAsImV4cCI6MTc5NDA0MjAwMCwianRpIjoiNGYxYzJiN2U5YTNkNGU4ZjhiNmExYzJkM2U0ZjVhNmIifQ.example-signature-not-real",
   "token_type": "bearer",
-  "expires_in": 28800,
+  "expires_in": 3600,
+  "refresh_token": "Xk3v9QmT2pLr8sWb4nZy6cHd1fJg5aEu7oKi0qMx3tVw9yBz2CnD4eFh6GjK8LmN",
   "user": {
     "id": "9a2c4e6f-1b3d-4f58-a7c9-0e2b4d6f8a10",
     "name": "Supervisor",
     "email": "supervisor@smartbin.test",
+    "phone": "+233241234567",
     "role": "supervisor"
   }
 }
 ```
 
-`expires_in` is in seconds (8 hours, one work shift). When the token expires, the API answers `401`
-and the app sends the user back to the login screen.
+The response also sets the cookie
+`refresh_token=<token>; HttpOnly; Path=/api/auth; SameSite=Lax; Max-Age=604800`
+(plus `Secure` when deployed with HTTPS, `COOKIE_SECURE=true`).
+Web uses the cookie and can ignore `refresh_token` in the body. Mobile uses the body.
+
+| Case | Status | Code |
+| --- | --- | --- |
+| Wrong email/phone or wrong password (the same answer for both, on purpose) | 401 | `invalid_credentials` |
+| Deactivated account (right password) | 403 | `account_disabled` |
+| 5 failed logins within 10 minutes: locked for 10 minutes | 423 | `account_locked` |
+
+The 5th wrong password already gets `423`. While locked, even the right password gets `423`.
+A successful login resets the count. The numbers are settings (`LOCKOUT_MAX_ATTEMPTS`,
+`LOCKOUT_WINDOW_MIN`, `LOCKOUT_MINUTES`). An admin can unlock early with the CLI (`python -m app.cli unlock`).
+
+#### `POST /api/auth/refresh`
+
+Gives a new access token and a new refresh token. The old refresh token stops working (rotation).
+Send the refresh token in the body (mobile), or send nothing and let the cookie do it (web).
+
+Request (file `rest/refresh-request.json`):
+
+```json
+{
+  "refresh_token": "Xk3v9QmT2pLr8sWb4nZy6cHd1fJg5aEu7oKi0qMx3tVw9yBz2CnD4eFh6GjK8LmN"
+}
+```
+
+Response `200`, the same shape as login, and the cookie is set again (file `rest/refresh-response.json`):
+
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5YTJjNGU2Zi0xYjNkLTRmNTgtYTdjOS0wZTJiNGQ2ZjhhMTAiLCJyb2xlIjoic3VwZXJ2aXNvciIsInR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3OTQwNDIwMDAsImV4cCI6MTc5NDA0NTYwMCwianRpIjoiN2E4YjljMGQxZTJmNGEzYjljOGQ3ZTZmNWE0YjNjMmQifQ.example-signature-not-real",
+  "token_type": "bearer",
+  "expires_in": 3600,
+  "refresh_token": "Pq7Rs2Tu4Vw6Xy8Za0Bc3De5Fg7Hi9Jk1Lm3No5Pq7Rs9Tu2Vw4Xy6Za8Bc0De2F",
+  "user": {
+    "id": "9a2c4e6f-1b3d-4f58-a7c9-0e2b4d6f8a10",
+    "name": "Supervisor",
+    "email": "supervisor@smartbin.test",
+    "phone": "+233241234567",
+    "role": "supervisor"
+  }
+}
+```
+
+| Case | Status | Code |
+| --- | --- | --- |
+| Missing, unknown, expired or already used refresh token | 401 | `invalid_refresh_token` |
+| Deactivated account | 403 | `account_disabled` |
+
+If an already used refresh token comes back, it may have been stolen: the server ends **all** of
+that user's sessions, and every device has to log in again.
+
+**When to refresh:** when a request gets `401 token_expired`, call refresh once, then repeat the
+request with the new access token. If refresh fails, go to the login screen.
+
+#### `POST /api/auth/logout`
+
+Needs the access token. Ends this session: the refresh token (from the body or the cookie)
+stops working and the cookie is cleared. Response `204`, no body.
+
+Request, this device (file `rest/logout-request.json`; web can send no body and the cookie is used):
+
+```json
+{
+  "refresh_token": "Pq7Rs2Tu4Vw6Xy8Za0Bc3De5Fg7Hi9Jk1Lm3No5Pq7Rs9Tu2Vw4Xy6Za8Bc0De2F"
+}
+```
+
+Request, every device of this user (file `rest/logout-all-request.json`):
+
+```json
+{
+  "all_devices": true
+}
+```
+
+#### `GET /api/me`
+
+The logged-in user. Response `200` (file `rest/me-response.json`):
+
+```json
+{
+  "id": "9a2c4e6f-1b3d-4f58-a7c9-0e2b4d6f8a10",
+  "name": "Supervisor",
+  "email": "supervisor@smartbin.test",
+  "phone": "+233241234567",
+  "role": "supervisor",
+  "is_active": true,
+  "created_at": "2026-11-01T10:00:00Z"
+}
+```
+
+| Case | Status | Code |
+| --- | --- | --- |
+| No `Authorization` header | 401 | `unauthorized` |
+| Bad token, or a refresh token sent as the bearer token | 401 | `invalid_token` |
+| Access token expired | 401 | `token_expired` |
+| Account deactivated after the token was issued | 403 | `account_disabled` |
 
 ### Errors
 
@@ -414,8 +537,14 @@ Every error has the same shape: `{"error": {"code": "...", "message": "..."}}`.
 | Code | HTTP status | When | Example file |
 | --- | --- | --- | --- |
 | `validation_error` | 422 | Bad body or query parameters | `rest/error-validation_error.json` |
-| `unauthorized` | 401 | No token, bad token, expired token, wrong password at login | `rest/error-unauthorized.json` |
+| `unauthorized` | 401 | No `Authorization` header at all | `rest/error-unauthorized.json` |
+| `invalid_credentials` | 401 | Login: wrong email/phone or password | `rest/error-invalid_credentials.json` |
+| `invalid_token` | 401 | The access token is bad (wrong signature, not an access token) | `rest/error-invalid_token.json` |
+| `token_expired` | 401 | The access token has expired: refresh it | `rest/error-token_expired.json` |
+| `invalid_refresh_token` | 401 | Refresh: the refresh token is missing, unknown, expired or used | `rest/error-invalid_refresh_token.json` |
 | `forbidden` | 403 | Logged in, but this role may not do this | `rest/error-forbidden.json` |
+| `account_disabled` | 403 | The account has been deactivated | `rest/error-account_disabled.json` |
+| `account_locked` | 423 | Too many failed logins. The message says when to try again. | `rest/error-account_locked.json` |
 | `not_found` | 404 | The thing doesn't exist, or is deleted | `rest/error-not_found.json` |
 | `conflict` | 409 | Clashes with existing data (duplicate email, route already started) | `rest/error-conflict.json` |
 | `internal_error` | 500 | Bug or server problem | `rest/error-internal_error.json` |
@@ -431,13 +560,57 @@ Every error has the same shape: `{"error": {"code": "...", "message": "..."}}`.
 }
 ```
 
-`401`:
+`401`, no `Authorization` header:
 
 ```json
 {
   "error": {
     "code": "unauthorized",
-    "message": "Missing or expired token. Log in again."
+    "message": "Log in first: no login token was sent."
+  }
+}
+```
+
+`401`, wrong password at login:
+
+```json
+{
+  "error": {
+    "code": "invalid_credentials",
+    "message": "Wrong email/phone or password"
+  }
+}
+```
+
+`401`, bad token:
+
+```json
+{
+  "error": {
+    "code": "invalid_token",
+    "message": "The login token is not valid. Log in again."
+  }
+}
+```
+
+`401`, expired access token:
+
+```json
+{
+  "error": {
+    "code": "token_expired",
+    "message": "The login token has expired. Refresh it or log in again."
+  }
+}
+```
+
+`401`, refresh with a used or expired refresh token:
+
+```json
+{
+  "error": {
+    "code": "invalid_refresh_token",
+    "message": "Your session has ended. Log in again."
   }
 }
 ```
@@ -448,7 +621,29 @@ Every error has the same shape: `{"error": {"code": "...", "message": "..."}}`.
 {
   "error": {
     "code": "forbidden",
-    "message": "Collectors cannot create routes."
+    "message": "Your role is not allowed to do this."
+  }
+}
+```
+
+`403`, deactivated account:
+
+```json
+{
+  "error": {
+    "code": "account_disabled",
+    "message": "This account has been deactivated."
+  }
+}
+```
+
+`423`, locked account:
+
+```json
+{
+  "error": {
+    "code": "account_locked",
+    "message": "Too many failed logins. Try again after 08:10 UTC (in 10 minutes)."
   }
 }
 ```
@@ -553,16 +748,35 @@ Every error has the same shape: `{"error": {"code": "...", "message": "..."}}`.
 **Draft: the details (body, filters, exact fields) are fixed in each feature ticket.**
 Who can call: A = admin, S = supervisor, C = collector.
 
+### Write rule (roles)
+
+Every write route (POST, PUT, PATCH, DELETE) follows this rule. The backend helpers are in
+`Backend/app/api/deps.py`.
+
+| What is written | Who | Backend check |
+| --- | --- | --- |
+| Bins, trucks, planning or cancelling a route, alerts | admin, supervisor | `require_role("admin", "supervisor")` |
+| Users and settings | admin | `require_role("admin")` |
+| A collector's own route actions: start, complete, stop updates, GPS, collections | the route's collector (admin and supervisor may too) | `get_current_user`, then `ensure_own_route_or_staff(user, route)` |
+| My own account (`/api/me`, logout) | anyone logged in | `get_current_user` |
+
+A collector never writes bins, trucks, users or settings, and never plans a route: those give
+`403 forbidden`. A collector only sees and changes their own routes.
+
+### Endpoints
+
 | Resource | Method and path | What it does | Who |
 | --- | --- | --- | --- |
-| auth | `POST /api/auth/login` | Email + password in, token out | anyone |
+| auth | `POST /api/auth/login` | Email or phone + password in, tokens out | anyone |
+| auth | `POST /api/auth/refresh` | New tokens from a refresh token | anyone with a refresh token |
+| auth | `POST /api/auth/logout` | End this session, or every session (`all_devices`) | A S C |
 | me | `GET /api/me` | My own user | A S C |
 | me | `PATCH /api/me` | Change my name, phone or password | A S C |
 | bins | `GET /api/bins` | List bins (paged, filters, sort) | A S C |
 | bins | `GET /api/bins/{id}` | One bin | A S C |
-| bins | `POST /api/bins` | Add a bin | A |
+| bins | `POST /api/bins` | Add a bin | A S |
 | bins | `PATCH /api/bins/{id}` | Edit a bin, set maintenance | A S |
-| bins | `DELETE /api/bins/{id}` | Delete a bin (soft delete, sets `deleted_at`) | A |
+| bins | `DELETE /api/bins/{id}` | Delete a bin (soft delete, sets `deleted_at`) | A S |
 | readings | `GET /api/bins/{id}/readings` | Fill history, `?from=&to=` (paged) | A S |
 | alerts | `GET /api/alerts` | List alerts, `?state=&type=&bin_id=` (paged) | A S |
 | alerts | `POST /api/alerts/{id}/acknowledge` | Mark an alert as seen | A S |
@@ -584,8 +798,8 @@ Who can call: A = admin, S = supervisor, C = collector.
 | collectors | `GET /api/collectors` | Collectors and whether they are on a route now | A S |
 | collectors | `GET /api/collectors/{id}/locations` | GPS trail, `?route_id=` | A S |
 | trucks | `GET /api/trucks` | List trucks | A S |
-| trucks | `POST /api/trucks` | Add a truck | A |
-| trucks | `PATCH /api/trucks/{id}` | Edit a truck, set inactive | A |
+| trucks | `POST /api/trucks` | Add a truck | A S |
+| trucks | `PATCH /api/trucks/{id}` | Edit a truck, set inactive | A S |
 | users | `GET /api/users` | List users, `?role=` (paged) | A |
 | users | `POST /api/users` | Add a user | A |
 | users | `PATCH /api/users/{id}` | Edit a user, change role, deactivate | A |
@@ -670,7 +884,7 @@ Fields come from `Backend/app/models/alerts.py`:
 
 ## 7. WebSocket
 
-- URL: `/ws?token=<JWT>` (same token as the REST API).
+- URL: `/ws?token=<access token>` (the same access token as the REST API, not the refresh token).
 - A bad or missing token: the server closes the connection with code `4401`.
 - Server to client only. Clients don't send messages in v1 (they use the REST API).
 - Every event looks like `{"type": "...", "data": {...}, "ts": "..."}`. `ts` is when the server sent it.
@@ -823,7 +1037,8 @@ No reply is needed. If a client gets nothing for 60 seconds, it reconnects.
 
 If the connection drops, retry after 1 s, then 2 s, then 5 s, then every 10 s until it works.
 After reconnecting, reload the screen's data from the REST API, because events sent while
-offline are not replayed. A close with code `4401` means the token is bad: log in again, don't retry.
+offline are not replayed. A close with code `4401` means the token is bad or expired: refresh the
+access token once and reconnect with the new one. If refresh fails, log in again.
 
 ## 8. Examples check
 
@@ -850,8 +1065,19 @@ reading fails with the code above.
 | Flag late | `bad/late.json` | yes |
 | Login request | `rest/login-request.json` | yes |
 | Login response | `rest/login-response.json` | yes |
+| Refresh request | `rest/refresh-request.json` | yes |
+| Refresh response | `rest/refresh-response.json` | yes |
+| Logout request (this device) | `rest/logout-request.json` | yes |
+| Logout request (all devices) | `rest/logout-all-request.json` | yes |
+| `GET /api/me` | `rest/me-response.json` | yes |
 | Error `validation_error` | `rest/error-validation_error.json` | yes |
 | Error `unauthorized` | `rest/error-unauthorized.json` | yes |
+| Error `invalid_credentials` | `rest/error-invalid_credentials.json` | yes |
+| Error `invalid_token` | `rest/error-invalid_token.json` | yes |
+| Error `token_expired` | `rest/error-token_expired.json` | yes |
+| Error `invalid_refresh_token` | `rest/error-invalid_refresh_token.json` | yes |
+| Error `account_disabled` | `rest/error-account_disabled.json` | yes |
+| Error `account_locked` | `rest/error-account_locked.json` | yes |
 | Error `forbidden` | `rest/error-forbidden.json` | yes |
 | Error `not_found` | `rest/error-not_found.json` | yes |
 | Error `conflict` | `rest/error-conflict.json` | yes |

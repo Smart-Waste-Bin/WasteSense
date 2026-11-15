@@ -1,6 +1,6 @@
 {
   "error": {
     "code": "forbidden",
-    "message": "Collectors cannot create routes."
+    "message": "Your role is not allowed to do this."
   }
 }
