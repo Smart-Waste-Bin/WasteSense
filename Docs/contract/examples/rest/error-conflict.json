@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "conflict",
+    "message": "A user with this email already exists."
+  }
+}

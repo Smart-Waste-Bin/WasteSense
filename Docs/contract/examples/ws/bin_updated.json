@@ -1,0 +1,11 @@
+{
+  "type": "bin_updated",
+  "data": {
+    "id": "BIN-001",
+    "status": "due",
+    "last_fill": 72,
+    "last_battery": 95,
+    "last_seen_at": "2026-11-07T08:30:00Z"
+  },
+  "ts": "2026-11-07T08:30:01Z"
+}

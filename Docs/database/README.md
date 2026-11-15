@@ -9,7 +9,7 @@ PostgreSQL 16 + PostGIS. Models are in `Backend/app/models/`, migrations in `Bac
 | `users` | People who log in: admins, supervisors and collectors (argon2 password hash, role). |
 | `bins` | Each smart bin: id like `BIN-001`, location (PostGIS point), size, status, latest fill and battery, and `is_physical` (real hardware bin or simulated). |
 | `readings` | Every fill-level message from a bin sensor (one row per message, unique per bin and `seq`). |
-| `rejected_readings` | Sensor messages we could not accept, kept raw with a reason code for debugging. |
+| `rejected_readings` | Sensor messages we could not accept, kept raw with the topic and a reason code (see `Docs/contract.md`, section 4). |
 | `alerts` | Bin alerts (due, urgent, offline, battery) and whether they are open, acknowledged or resolved. |
 | `trucks` | Collection trucks: plate number, capacity and default collector. |
 | `routes` | A planned collection trip: collector, truck, method, distances and timing. |

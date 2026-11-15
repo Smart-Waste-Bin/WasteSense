@@ -30,7 +30,7 @@ pip install -r requirements.txt -r requirements-dev.txt
 uvicorn app.main:app --reload
 ```
 
-Check it works: open http://127.0.0.1:8000/health, it should return `{"status": "ok"}`.
+Check it works: open http://127.0.0.1:8000/api/health, it should return `{"status": "ok"}`.
 API docs are at http://127.0.0.1:8000/docs.
 
 The app imports routing directly: `from routing import solve_route`.

@@ -83,11 +83,18 @@ def backend_messages():
     stop(client)
 
 
-def publish_as(device, topic, payload):
-    client, rc = connect(device, settings.mqtt_test_device_password)
-    assert not rc.is_failure, f"{device} could not connect: {rc}"
+def publish_as(username, topic, payload, password=None):
+    client, rc = connect(username, password or settings.mqtt_test_device_password)
+    assert not rc.is_failure, f"{username} could not connect: {rc}"
     client.publish(topic, payload, qos=1).wait_for_publish(5)
     stop(client)
+
+
+def arrives(messages, topic, payload):
+    deadline = time.time() + 5
+    while time.time() < deadline and (topic, payload) not in messages:
+        time.sleep(0.1)
+    return (topic, payload) in messages
 
 
 def test_anonymous_connection_is_refused():
@@ -98,15 +105,31 @@ def test_anonymous_connection_is_refused():
 
 def test_device_cannot_publish_to_another_bin(backend_messages):
     payload = f"spoof-{uuid.uuid4().hex}"
-    publish_as("bin-001", "bins/bin-002/fill", payload)
+    publish_as("BIN-001", "bins/BIN-002/readings", payload)
     time.sleep(1.5)
-    assert ("bins/bin-002/fill", payload) not in backend_messages
+    assert ("bins/BIN-002/readings", payload) not in backend_messages
 
 
-def test_device_can_publish_to_its_own_bin(backend_messages):
+def test_device_can_publish_its_own_readings(backend_messages):
     payload = f"ok-{uuid.uuid4().hex}"
-    publish_as("bin-001", "bins/bin-001/fill", payload)
-    deadline = time.time() + 5
-    while time.time() < deadline and ("bins/bin-001/fill", payload) not in backend_messages:
-        time.sleep(0.1)
-    assert ("bins/bin-001/fill", payload) in backend_messages
+    publish_as("BIN-001", "bins/BIN-001/readings", payload)
+    assert arrives(backend_messages, "bins/BIN-001/readings", payload)
+
+
+def test_device_cannot_fake_emptied(backend_messages):
+    payload = f"spoof-{uuid.uuid4().hex}"
+    publish_as("BIN-001", "bins/BIN-001/emptied", payload)
+    time.sleep(1.5)
+    assert ("bins/BIN-001/emptied", payload) not in backend_messages
+
+
+def test_backend_can_publish_emptied(backend_messages):
+    payload = f"ok-{uuid.uuid4().hex}"
+    publish_as(settings.mqtt_user, "bins/BIN-002/emptied", payload, settings.mqtt_password)
+    assert arrives(backend_messages, "bins/BIN-002/emptied", payload)
+
+
+def test_simulator_can_publish_readings(backend_messages):
+    payload = f"ok-{uuid.uuid4().hex}"
+    publish_as(settings.mqtt_sim_user, "bins/BIN-005/readings", payload, settings.mqtt_sim_password)
+    assert arrives(backend_messages, "bins/BIN-005/readings", payload)

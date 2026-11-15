@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Status (MQTT bins/{bin_id}/status, retained), contract v1.0",
+  "type": "object",
+  "required": [
+    "state"
+  ],
+  "properties": {
+    "state": {
+      "enum": [
+        "online",
+        "offline"
+      ]
+    },
+    "fw": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "if": {
+    "properties": {
+      "state": {
+        "const": "online"
+      }
+    }
+  },
+  "then": {
+    "required": [
+      "state",
+      "fw"
+    ]
+  }
+}

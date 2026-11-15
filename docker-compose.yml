@@ -55,13 +55,14 @@ services:
       - "8000:8000"
     volumes:
       - ./Backend:/app   # live reload on code changes (includes Backend/routing)
+      - ./Docs:/Docs:ro  # Docs/contract examples, read by tests/test_contract.py
     depends_on:
       db:
         condition: service_healthy
       mqtt:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
       interval: 5s
       timeout: 5s
       retries: 20

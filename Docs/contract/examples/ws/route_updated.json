@@ -1,0 +1,19 @@
+{
+  "type": "route_updated",
+  "data": {
+    "id": "7f3c9a2e-4b1d-4e8a-9c2f-1a6b5d3e8f01",
+    "status": "in_progress",
+    "collector_id": "3b8d1f4a-6c2e-4a97-b5d0-8e1f2a3c4d55",
+    "truck_id": "5e7a9c1b-3d5f-4b72-9e4a-6c8e0a2b4d77",
+    "started_at": "2026-11-07T08:45:00Z",
+    "completed_at": null,
+    "stop": {
+      "id": "c41e8b07-2d9a-4f63-8e15-9b0a7c2d4e66",
+      "bin_id": "BIN-002",
+      "stop_order": 1,
+      "status": "emptied",
+      "emptied_at": "2026-11-07T09:10:00Z"
+    }
+  },
+  "ts": "2026-11-07T09:10:02Z"
+}

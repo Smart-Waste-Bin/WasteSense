@@ -31,12 +31,17 @@ if [ ! -f certs/server.crt ] || [ ! -f certs/server.key ] || [ ! -f certs/ca.crt
   cd ..
 fi
 
-echo "Making passwd for: $MQTT_USER, bin-001, bin-002"
+# Older .env files have no simulator user yet: fall back to the .env.example values.
+MQTT_SIM_USER="${MQTT_SIM_USER:-smartbin-simulator}"
+MQTT_SIM_PASSWORD="${MQTT_SIM_PASSWORD:-change-me-sim}"
+
+echo "Making passwd for: $MQTT_USER, $MQTT_SIM_USER, BIN-001, BIN-002"
 rm -f passwd
 touch passwd
 mosquitto_passwd -b passwd "$MQTT_USER" "$MQTT_PASSWORD"
-mosquitto_passwd -b passwd bin-001 "$MQTT_TEST_DEVICE_PASSWORD"
-mosquitto_passwd -b passwd bin-002 "$MQTT_TEST_DEVICE_PASSWORD"
+mosquitto_passwd -b passwd "$MQTT_SIM_USER" "$MQTT_SIM_PASSWORD"
+mosquitto_passwd -b passwd BIN-001 "$MQTT_TEST_DEVICE_PASSWORD"
+mosquitto_passwd -b passwd BIN-002 "$MQTT_TEST_DEVICE_PASSWORD"
 chmod 644 passwd
 
 echo "MQTT setup done."

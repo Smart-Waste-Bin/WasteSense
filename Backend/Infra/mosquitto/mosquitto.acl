@@ -1,10 +1,21 @@
-# Who can read/write which topics.
+# Who can read/write which topics. See Docs/contract.md, section 2.
 
-# Devices: the username is the bin id (e.g. bin-001).
-# A device can only publish to its own topic: bins/bin-001/...
-pattern write bins/%u/#
+# Devices: the username is the bin id (e.g. BIN-001).
+# A device can only send its own readings and status, and read its own emptied topic.
+pattern write bins/%u/readings
+pattern write bins/%u/status
+pattern read bins/%u/emptied
 
-# Backend: reads every bin.
+# Backend: reads every bin, tells bins (and the simulator) when they are emptied.
 # This name must match MQTT_USER in .env.
 user smartbin-backend
 topic read bins/#
+topic write bins/+/emptied
+
+# Simulator: sends readings and status for the simulated bins.
+# The broker can't tell simulated bins from real ones, so this user can write for any bin.
+# This name must match MQTT_SIM_USER in .env.
+user smartbin-simulator
+topic write bins/+/readings
+topic write bins/+/status
+topic read bins/+/emptied

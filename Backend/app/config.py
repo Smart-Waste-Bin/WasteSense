@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     mqtt_user: str = "smartbin-backend"
     mqtt_password: str = "change-me-mqtt"
     mqtt_test_device_password: str = "change-me-device"
+    mqtt_sim_user: str = "smartbin-simulator"
+    mqtt_sim_password: str = "change-me-sim"
 
     jwt_secret: str = "change-me-to-a-long-random-string"
     cors_origins: str = "http://localhost:5173,http://localhost:8081"
