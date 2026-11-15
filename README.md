@@ -1,6 +1,6 @@
 # WasteSense
 
-Smart Waste Bin is a low-cost IoT system that tells waste collectors which bins are full and plans the shortest route to empty only those bins.. The repo is split into three parts:
+Smart Waste Bin is a low-cost IoT system that tells waste collectors which bins are full and plans the shortest route to empty only those bins. The repo is split into these parts:
 
 ## Folders
 
@@ -10,14 +10,19 @@ Smart Waste Bin is a low-cost IoT system that tells waste collectors which bins 
 | `Backend/` | The server and API. Receives data from the bins, stores it in the database and serves it to the web and mobile apps. |
 | `Backend/Infra/mosquitto/` | MQTT broker config, ACL and the scripts that make dev passwords and certs. |
 | `Frontend/` | The user-facing apps. |
-| `Frontend/web/` | Web dashboard for monitoring the bins. |
+| `Frontend/Web/` | Web dashboard for monitoring the bins. |
 | `Frontend/Mobile/` | Mobile app for users and collectors. |
+| `Docs/` | Shared docs. `Docs/contract.md` says how the bin, backend and apps talk to each other (MQTT topics, API, WebSocket). |
 
 Each folder will get its own README with setup steps once code is added.
 
 ## Local setup
 
 This starts the database (PostgreSQL + PostGIS), the MQTT broker and the backend with one command.
+**Docker is required.** Without it you would have to install and configure PostgreSQL, PostGIS,
+Mosquitto (with certs and passwords) and Python yourself. We don't support that.
+
+Steps 1 to 6 are for the **first time only**. After that, see "Every day" below.
 
 1. Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) and [Git](https://git-scm.com/).
    On Windows, the commands below work in PowerShell, Git Bash or WSL.
@@ -28,32 +33,44 @@ This starts the database (PostgreSQL + PostGIS), the MQTT broker and the backend
    cd WasteSense
    ```
 
-3. Get the settings file. Ask the team for the shared `.env` and put it in the repo root
-   (it is never committed). Working alone? Make your own and pick your own passwords:
+3. Get the settings file. Ask Joshua for the shared `.env` (sent privately) and put it in the
+   repo root, next to `docker-compose.yml`. It is never committed and never posted in a group chat.
+   The whole team uses the same `.env`, so everyone has the same passwords.
+   The root `.env` is the only settings file. Docker and the backend both read it.
+
+   Working alone, outside the team? Make your own and replace every `change-me` value:
    ```bash
    cp .env.example .env
    ```
-   The root `.env` is the only settings file. Docker and the backend both read it.
 
 4. Start everything:
    ```bash
    docker compose up
    ```
-   The first start takes a few minutes while images download. A one-off `mqtt-setup` container
-   runs first: it makes the dev TLS certs (if missing) and the broker's password file from `.env`,
-   then exits. If you change an MQTT password in `.env`, run `docker compose down` and then
-   `docker compose up` so the broker picks it up.
+   The first start takes a while (images download and the backend image builds; about 15 minutes
+   on a slow connection). Later starts take seconds.
+
+   You don't make any certs or MQTT passwords yourself. A one-off `mqtt-setup` container runs first
+   and then exits:
+
+   | Made automatically by `docker compose up` | Comes from `.env` |
+   | --- | --- |
+   | Dev TLS certs in `Backend/Infra/mosquitto/certs/` (only if missing) | The MQTT passwords (`MQTT_PASSWORD`, `MQTT_SIM_PASSWORD`, `MQTT_TEST_DEVICE_PASSWORD`) |
+   | The broker's password file `Backend/Infra/mosquitto/passwd`, rebuilt on every start | The database password and the JWT secret |
+
+   Both made files are gitignored and dev only. If an MQTT password in `.env` changes, run
+   `docker compose down` and then `docker compose up` so the broker picks it up.
 
    The scripts in `Backend/Infra/mosquitto/` (`make-dev-certs`, `make-passwords`) still work if you
-   want to make these files by hand.
+   want to make these files by hand, but you don't need them.
 
 5. Check it works (in a second terminal):
    - Open http://localhost:8000/api/health. It should show `{"status":"ok"}`.
    - Publish as a test device, with a password. This works (no output, no error):
      ```bash
-     docker compose exec mqtt mosquitto_pub -h localhost -u BIN-001 -P change-me-device -t bins/BIN-001/readings -m 42
+     docker compose exec mqtt mosquitto_pub -h localhost -u BIN-001 -P <device-password> -t bins/BIN-001/readings -m 42
      ```
-     Use your `MQTT_TEST_DEVICE_PASSWORD` from `.env` in place of `change-me-device`.
+     Use `MQTT_TEST_DEVICE_PASSWORD` from `.env` in place of `<device-password>`.
    - Publish with no password. The broker refuses it (`Connection Refused: not authorised`):
      ```bash
      docker compose exec mqtt mosquitto_pub -h localhost -t bins/BIN-001/readings -m 42
@@ -74,6 +91,29 @@ This starts the database (PostgreSQL + PostGIS), the MQTT broker and the backend
    ```bash
    docker compose exec backend pytest
    ```
+
+### Every day
+
+```bash
+git pull
+docker compose up -d
+```
+
+Run these again only when needed:
+
+| When | Run |
+| --- | --- |
+| Someone added a migration (new file in `Backend/alembic/versions/`) | `docker compose exec backend alembic upgrade head` |
+| The seed data changed (`Backend/scripts/data/`) | `docker compose exec backend python -m scripts.seed` |
+| `requirements.txt`, `requirements-dev.txt` or the `Dockerfile` changed | `docker compose up -d --build` |
+
+### If something goes wrong
+
+- **`password authentication failed for user "smartbin"`**: your database was made with an older
+  `.env`. The database keeps its first password. Wipe your local data and start again:
+  `docker compose down -v`, `docker compose up -d`, then steps 6 and 7.
+- **The backend or broker won't start**: run `docker compose logs mqtt-setup mqtt backend`.
+  The most common cause is a missing or misplaced `.env`.
 
 ### Changing the database
 

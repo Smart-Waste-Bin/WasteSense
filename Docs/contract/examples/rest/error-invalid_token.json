@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "invalid_token",
+    "message": "The login token is not valid. Log in again."
+  }
+}

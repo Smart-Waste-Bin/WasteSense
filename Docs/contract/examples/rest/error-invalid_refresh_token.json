@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "invalid_refresh_token",
+    "message": "Your session has ended. Log in again."
+  }
+}
