@@ -2,9 +2,10 @@ import {
   ChevronDown,
   ChevronRight,
   Leaf,
-  MapPin,
+  Map,
   PackageCheck,
   Recycle,
+  Route,
   Truck,
 } from "lucide-react";
 import { Button } from "../ui/button";
@@ -142,7 +143,7 @@ function NetworkHealth() {
         </Button>
       </CardHeader>
       <CardContent>
-        <div className="flex items-center gap-8">
+        <div className="flex min-w-0 flex-wrap items-center gap-6 sm:gap-8">
           <div
             className="relative flex size-36 shrink-0 items-center justify-center rounded-full"
             style={{
@@ -198,7 +199,7 @@ function AttentionBins() {
                 <div>
                   <p className="text-sm font-bold text-slate-800">{bin.name}</p>
                   <p className="mt-1 flex items-center gap-1 text-xs text-slate-400">
-                    <MapPin size={12} />
+                    <Map size={12} />
                     {bin.location}
                   </p>
                 </div>
@@ -227,33 +228,35 @@ function AttentionBins() {
 
 function Dashboard() {
   return (
-    <main className="mx-auto max-w-[1440px] px-5 py-8 sm:px-8">
-      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-emerald-600">
-            <span className="size-2 rounded-full bg-emerald-500" /> All systems
-            operational
-          </p>
+    <main className="mx-auto w-full max-w-[1440px] min-w-0 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+      <div className="mb-8 flex flex-col items-start justify-between gap-5 sm:flex-row sm:items-end">
+        <div className="min-w-0">
           <h2 className="text-3xl font-bold tracking-tight text-slate-950">
             Good morning, Jordan <span aria-hidden="true">👋</span>
           </h2>
           <p className="mt-2 text-sm text-slate-500">
-            Here’s what’s happening across your waste network today.
+            Monday, 12 February 2025 • 5 bins need collection today
           </p>
         </div>
-        <Button
-          variant="outline"
-          className="gap-2 rounded-xl font-bold text-slate-600"
-        >
-          <MapPin size={16} /> All locations <ChevronDown size={15} />
-        </Button>
+        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
+          <Button
+            variant="outline"
+            className="w-full gap-2 rounded-xl font-bold text-slate-600 sm:w-auto"
+          >
+            <Map size={16} /> Open live map
+          </Button>
+          <Button className="w-full rounded-xl sm:w-auto">
+            <Route />
+            Plan collection route
+          </Button>
+        </div>
       </div>
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {metrics.map((metric) => (
           <MetricCard key={metric.title} {...metric} />
         ))}
       </section>
-      <section className="mt-6 grid gap-6 xl:grid-cols-[1.4fr_1fr]">
+      <section className="mt-6 grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <WasteChart />
         <NetworkHealth />
       </section>

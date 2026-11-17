@@ -13,7 +13,7 @@ function App() {
   return (
     <SidebarProvider className="bg-[#f7f9fa] text-slate-900" style={{ "--sidebar-width": "260px" } as CSSProperties}>
       <Sidebar activePage={activePage} onNavigate={setActivePage} />
-      <SidebarInset className="min-h-screen bg-[#f7f9fa]">
+      <SidebarInset className="min-h-screen min-w-0 bg-[#f7f9fa]">
         <Navbar activePage={activePage} onSignOut={() => setIsAuthenticated(false)} />
         <Dashboard />
       </SidebarInset>

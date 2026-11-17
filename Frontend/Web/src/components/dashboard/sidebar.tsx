@@ -1,5 +1,15 @@
-import { CircleHelp, LayoutDashboard, PackageCheck, Recycle, Settings, Truck, Users } from "lucide-react"
-import { Logo } from "@/components/brand/logo"
+import {
+  Users,
+  LayoutDashboard,
+  Map,
+  TriangleExclamationPoint,
+  RadioTower,
+  Trash,
+  Route,
+  CircleHelp,
+  Settings,
+} from "lucide-react";
+
 import {
   Sidebar as ShadcnSidebar,
   SidebarContent,
@@ -13,19 +23,23 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
+import Logo from "@/assets/logo.jpg";
 
 const navigation = [
-  { label: "Dashboard", icon: LayoutDashboard },
-  { label: "Smart Bins", icon: PackageCheck, badge: "24" },
-  { label: "Collection routes", icon: Truck },
-  { label: "Analytics", icon: Recycle },
-]
+  { label: "Overview", icon: LayoutDashboard },
+  { label: "Live Map", icon: Map, badge: "24" },
+  { label: "Bins", icon: Trash },
+  { label: "Alerts", icon: TriangleExclamationPoint, badge: "3" },
+  { label: "Routes", icon: Route },
+  { label: "Live Tracking", icon: RadioTower },
+  { label: "Collectors", icon: Users },
+];
 
 type SidebarProps = {
-  activePage: string
-  onNavigate: (page: string) => void
-}
+  activePage: string;
+  onNavigate: (page: string) => void;
+};
 
 function NavigationItem({
   label,
@@ -34,18 +48,18 @@ function NavigationItem({
   activePage,
   onNavigate,
 }: {
-  label: string
-  icon: typeof LayoutDashboard
-  badge?: string
-  activePage: string
-  onNavigate: (page: string) => void
+  label: string;
+  icon: typeof LayoutDashboard;
+  badge?: string;
+  activePage: string;
+  onNavigate: (page: string) => void;
 }) {
-  const { isMobile, setOpenMobile } = useSidebar()
+  const { isMobile, setOpenMobile } = useSidebar();
 
   const handleNavigate = () => {
-    onNavigate(label)
-    if (isMobile) setOpenMobile(false)
-  }
+    onNavigate(label);
+    if (isMobile) setOpenMobile(false);
+  };
 
   return (
     <SidebarMenuItem>
@@ -58,45 +72,95 @@ function NavigationItem({
         <Icon size={19} strokeWidth={activePage === label ? 2.4 : 2} />
         <span>{label}</span>
       </SidebarMenuButton>
-      {badge && <SidebarMenuBadge className="right-3 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500">{badge}</SidebarMenuBadge>}
+      {badge && (
+        <SidebarMenuBadge className="right-3 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500">
+          {badge}
+        </SidebarMenuBadge>
+      )}
     </SidebarMenuItem>
-  )
+  );
 }
 
 function Sidebar({ activePage, onNavigate }: SidebarProps) {
   return (
     <ShadcnSidebar className="border-slate-200 bg-white" collapsible="icon">
       <SidebarHeader className="px-5 py-7">
-        <Logo />
+        <div className="flex items-center gap-2">
+          <img src={Logo} alt="Logo" className="h-8 w-8 rounded-sm" />
+          <h1 className="text-lg font-bold">
+            Smart<span className="text-emerald-900">Bin</span>
+          </h1>
+        </div>
       </SidebarHeader>
       <SidebarContent className="px-3">
         <SidebarGroup className="p-0">
-          <SidebarGroupLabel className="px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Workspace</SidebarGroupLabel>
+          <SidebarGroupLabel className="px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
+            MONITOR
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="gap-1">
-              {navigation.map((item) => <NavigationItem key={item.label} {...item} activePage={activePage} onNavigate={onNavigate} />)}
+              {navigation.slice(0, 4).map((item) => (
+                <NavigationItem
+                  key={item.label}
+                  {...item}
+                  activePage={activePage}
+                  onNavigate={onNavigate}
+                />
+              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
         <SidebarGroup className="mt-7 p-0">
-          <SidebarGroupLabel className="px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Support</SidebarGroupLabel>
+          <SidebarGroupLabel className="px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
+            OPERATE
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="gap-1">
-              <SidebarMenuItem><SidebarMenuButton className="h-auto rounded-xl px-3 py-3 text-sm font-semibold text-slate-500"><CircleHelp size={19} /><span>Help center</span></SidebarMenuButton></SidebarMenuItem>
-              <SidebarMenuItem><SidebarMenuButton className="h-auto rounded-xl px-3 py-3 text-sm font-semibold text-slate-500"><Settings size={19} /><span>Settings</span></SidebarMenuButton></SidebarMenuItem>
+              {navigation.slice(4).map((item) => (
+                <NavigationItem
+                  key={item.label}
+                  {...item}
+                  activePage={activePage}
+                  onNavigate={onNavigate}
+                />
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarGroup className="mt-7 p-0">
+          <SidebarGroupLabel className="px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
+            Support
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu className="gap-1">
+              <SidebarMenuItem>
+                <SidebarMenuButton className="h-auto rounded-xl px-3 py-3 text-sm font-semibold text-slate-500">
+                  <CircleHelp size={19} />
+                  <span>Help center</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton className="h-auto rounded-xl px-3 py-3 text-sm font-semibold text-slate-500">
+                  <Settings size={19} />
+                  <span>Settings</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="p-5 group-data-[collapsible=icon]:p-2">
         <div className="rounded-2xl bg-slate-50 p-4 group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:p-0">
-          <div className="mb-3 flex size-9 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 group-data-[collapsible=icon]:mb-0"><Users size={18} /></div>
-          <p className="text-sm font-bold group-data-[collapsible=icon]:hidden">City operations</p>
-          <p className="mt-1 text-xs leading-5 text-slate-500 group-data-[collapsible=icon]:hidden">12 team members online</p>
+          <h6 className="mt-1 leading-5 group-data-[collapsible=icon]:hidden font-bold">
+            All systems live
+          </h6>
+          <p className="text-xs leading-5 text-slate-500 group-data-[collapsible=icon]:hidden">
+            9 of 10 sensors reporting
+          </p>
         </div>
       </SidebarFooter>
     </ShadcnSidebar>
-  )
+  );
 }
 
-export { Sidebar }
+export { Sidebar };

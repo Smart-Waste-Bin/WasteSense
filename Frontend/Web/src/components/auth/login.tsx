@@ -1,7 +1,7 @@
 import type { FormEvent } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import { Logo } from "../brand/logo";
+
 
 function Login({ onLogin }: { onLogin: () => void }) {
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -14,7 +14,7 @@ function Login({ onLogin }: { onLogin: () => void }) {
       <section className="relative hidden overflow-hidden bg-emerald-600 p-12 text-white lg:flex lg:w-[48%] lg:flex-col lg:justify-between">
         <div className="absolute -right-36 -top-32 size-[520px] rounded-full border-[80px] border-white/10" />
         <div className="absolute -bottom-48 -left-20 size-[440px] rounded-full border-[70px] border-white/10" />
-        <Logo />
+        
         <div className="relative max-w-md">
           <p className="mb-5 text-sm font-bold uppercase tracking-[0.2em] text-emerald-100">
             Cleaner cities. Smarter future.
@@ -34,7 +34,7 @@ function Login({ onLogin }: { onLogin: () => void }) {
       <section className="flex flex-1 items-center justify-center bg-slate-50 px-6 py-12">
         <div className="w-full max-w-[410px]">
           <div className="mb-10 lg:hidden">
-            <Logo />
+           
           </div>
           <p className="mb-3 text-sm font-semibold text-emerald-600">
             Welcome back
