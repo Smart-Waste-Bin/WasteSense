@@ -1,11 +1,13 @@
 {
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5YTJjNGU2Zi0xYjNkLTRmNTgtYTdjOS0wZTJiNGQ2ZjhhMTAiLCJyb2xlIjoic3VwZXJ2aXNvciIsImV4cCI6MTc5NDA0NjYwMH0.signature",
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5YTJjNGU2Zi0xYjNkLTRmNTgtYTdjOS0wZTJiNGQ2ZjhhMTAiLCJyb2xlIjoic3VwZXJ2aXNvciIsInR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3OTQwMzg0MDAsImV4cCI6MTc5NDA0MjAwMCwianRpIjoiNGYxYzJiN2U5YTNkNGU4ZjhiNmExYzJkM2U0ZjVhNmIifQ.example-signature-not-real",
   "token_type": "bearer",
-  "expires_in": 28800,
+  "expires_in": 3600,
+  "refresh_token": "Xk3v9QmT2pLr8sWb4nZy6cHd1fJg5aEu7oKi0qMx3tVw9yBz2CnD4eFh6GjK8LmN",
   "user": {
     "id": "9a2c4e6f-1b3d-4f58-a7c9-0e2b4d6f8a10",
     "name": "Supervisor",
     "email": "supervisor@smartbin.test",
+    "phone": "+233241234567",
     "role": "supervisor"
   }
 }

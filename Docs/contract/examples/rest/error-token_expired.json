@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "token_expired",
+    "message": "The login token has expired. Refresh it or log in again."
+  }
+}

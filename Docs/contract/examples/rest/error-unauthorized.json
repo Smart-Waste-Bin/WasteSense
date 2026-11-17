@@ -1,6 +1,6 @@
 {
   "error": {
     "code": "unauthorized",
-    "message": "Missing or expired token. Log in again."
+    "message": "Log in first: no login token was sent."
   }
 }
