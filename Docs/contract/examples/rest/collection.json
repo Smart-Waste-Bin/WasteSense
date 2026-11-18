@@ -1,0 +1,14 @@
+{
+  "id": "5d2b7c9e-1a3f-4e86-b0d4-7f9a2c6e1b38",
+  "bin_id": "BIN-002",
+  "collector_id": "3b8d1f4a-6c2e-4a97-b5d0-8e1f2a3c4d55",
+  "stop_id": "c41e8b07-2d9a-4f63-8e15-9b0a7c2d4e66",
+  "route_id": "7f3c9a2e-4b1d-4e8a-9c2f-1a6b5d3e8f01",
+  "emptied_at": "2026-11-07T09:10:00Z",
+  "fill_before": 92,
+  "confirmation": "confirmed",
+  "confirmed_by_sensor": true,
+  "confirmed_at": "2026-11-07T09:15:02Z",
+  "unconfirmed_at": null,
+  "created_at": "2026-11-07T09:10:01Z"
+}

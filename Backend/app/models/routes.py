@@ -97,6 +97,15 @@ class RouteStop(Base):
 
 class Collection(Base):
     __tablename__ = "collections"
+    __table_args__ = (
+        Index("ix_collections_bin_id_emptied_at", "bin_id", "emptied_at"),
+        Index(
+            "uq_collections_stop_id",
+            "stop_id",
+            unique=True,
+            postgresql_where=text("stop_id IS NOT NULL"),
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         Uuid, primary_key=True, server_default=text("gen_random_uuid()")
@@ -107,6 +116,8 @@ class Collection(Base):
     emptied_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     fill_before: Mapped[Decimal | None] = mapped_column(Numeric)
     confirmed_by_sensor: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
+    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    unconfirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))  # flagged
     idempotency_key: Mapped[uuid.UUID] = mapped_column(Uuid, unique=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

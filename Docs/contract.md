@@ -7,10 +7,10 @@ to each other. If the code and this file disagree, this file wins and the code g
 
 | | |
 | --- | --- |
-| Version | 1.5 |
+| Version | 1.6 |
 | Date | 2026-11-18 |
 | Status | Draft - awaiting approval |
-| Tickets | SET-03 (FR-04, FR-15), AUTH-01 (FR-24, FR-26, FR-27), BE-02 (FR-10, FR-11), BE-04 (FR-15, FR-33), BE-07 (FR-13, FR-34) |
+| Tickets | SET-03 (FR-04, FR-15), AUTH-01 (FR-24, FR-26, FR-27), BE-02 (FR-10, FR-11), BE-04 (FR-15, FR-33), BE-07 (FR-13, FR-34), BE-08 (FR-12) |
 
 ### Approval
 
@@ -39,6 +39,7 @@ to each other. If the code and this file disagree, this file wins and the code g
 | 1.3 | BE-04 | Locations are `{lat, lng}` instead of `{lat, lon}` (the BE-04 ticket says `lng`). New `GET /api/stats/overview`. `GET /api/bins/{id}/readings` takes `bucket=raw\|hour`, and its `size` goes up to 1000 so 30 days of hours fit in one page. `GET /api/bins` takes `q` (search in ID and name). The contract was never approved and no frontend code used `lon`, so the rename is 1.3, not 2.0. |
 | 1.4 | BE-06 | Real-time monitoring: the device measures about every second and sends a reading when `fill` changes by 2 or more, plus a heartbeat reading if nothing was sent for `reporting_interval_s` (section 3). Message format unchanged, so nothing changes for the backend or the frontend. |
 | 1.5 | BE-07 | New `GET /api/bins/{id}/quality` (received, expected, missing, duplicates, late, rejected) and `GET /api/bins/{id}/rejected` (the messages that were not stored, with their reason). |
+| 1.6 | BE-08 | `POST /api/collections` details (idempotent, sets the stop to emptied, publishes `emptied`) and `GET /api/collections` filters. Sensor confirmation rule. Collection fields `confirmed_at`, `unconfirmed_at`, `confirmation`. New notification type `collection_unconfirmed`. Admin and supervisor may also record a collection (write rule, section 6). |
 
 ## 1. Naming and common rules
 
@@ -824,8 +825,8 @@ A collector never writes bins, trucks, users or settings, and never plans a rout
 | routes | `POST /api/routes/{id}/locations` | Send my GPS position during a route | C (own) |
 | stops | `GET /api/routes/{id}/stops` | Stops in order | A S C (own) |
 | stops | `PATCH /api/routes/{id}/stops/{stop_id}` | Arrived, skipped (with reason), note, photo | C (own) |
-| collections | `POST /api/collections` | Bin emptied (sends `idempotency_key`; triggers MQTT `emptied`) | C |
-| collections | `GET /api/collections` | Collection history (paged) | A S |
+| collections | `POST /api/collections` | Bin emptied (sends `idempotency_key`; triggers MQTT `emptied`) | C (own route) A S |
+| collections | `GET /api/collections` | Collection history, `?bin_id=&confirmation=&from=&to=` (paged) | A S |
 | collectors | `GET /api/collectors` | Collectors and whether they are on a route now | A S |
 | collectors | `GET /api/collectors/{id}/locations` | GPS trail, `?route_id=` | A S |
 | trucks | `GET /api/trucks` | List trucks | A S |
@@ -1028,6 +1029,63 @@ object, or the text when it was not JSON). Late readings are in the normal readi
   "total": 1
 }
 ```
+
+### `POST /api/collections`
+
+A bin was emptied (the collector's "Emptied" button, APP-05). File `rest/collection-request.json`:
+
+```json
+{
+  "bin_id": "BIN-002",
+  "idempotency_key": "0f8e6a52-3c1b-4d7e-9a24-6b5c8d1e2f30",
+  "stop_id": "c41e8b07-2d9a-4f63-8e15-9b0a7c2d4e66",
+  "emptied_at": "2026-11-07T09:10:00Z"
+}
+```
+
+- `idempotency_key`: a UUID the app makes once per tap and sends again on every retry.
+  The same key, or a second collection for the same stop, returns the first collection with
+  `200` instead of `201`. So one tap is always exactly one collection.
+- `stop_id`: the route stop, or leave it out when the bin was emptied outside a route.
+  The stop's `status` becomes `emptied`. A collector may only use stops on their own route
+  (`403 forbidden`). A stop for another bin gives `422`.
+- `emptied_at`: leave it out for now. It can't be in the future.
+- The backend then publishes `bins/{id}/emptied` (section 2), so the bin or the simulator resets.
+
+Response `201` (file `rest/collection.json`):
+
+```json
+{
+  "id": "5d2b7c9e-1a3f-4e86-b0d4-7f9a2c6e1b38",
+  "bin_id": "BIN-002",
+  "collector_id": "3b8d1f4a-6c2e-4a97-b5d0-8e1f2a3c4d55",
+  "stop_id": "c41e8b07-2d9a-4f63-8e15-9b0a7c2d4e66",
+  "route_id": "7f3c9a2e-4b1d-4e8a-9c2f-1a6b5d3e8f01",
+  "emptied_at": "2026-11-07T09:10:00Z",
+  "fill_before": 92,
+  "confirmation": "confirmed",
+  "confirmed_by_sensor": true,
+  "confirmed_at": "2026-11-07T09:15:02Z",
+  "unconfirmed_at": null,
+  "created_at": "2026-11-07T09:10:01Z"
+}
+```
+
+### Sensor confirmation
+
+- A collection is **confirmed** by the first reading taken from `emptied_at` up to 30 minutes
+  later that shows `fill` under 20, or a drop of 40 or more from `fill_before` (the bin's
+  `last_fill` when it was emptied). Then `confirmed_by_sensor = true` and `confirmed_at` is set.
+- If nothing confirms it within 30 minutes, the backend sets `unconfirmed_at` (checked every
+  60 s) and sends every active supervisor a `notification` of type `collection_unconfirmed`
+  (saved, and over the WebSocket), with `data` `{"collection_id": "...", "bin_id": "BIN-002"}`.
+- A late reading (section 4) taken within the 30 minutes still confirms a flagged collection.
+- `confirmation` sums it up: `waiting`, `confirmed` or `unconfirmed`.
+
+### `GET /api/collections`
+
+Newest first. Filters: `bin_id`, `confirmation` (`waiting`, `confirmed`, `unconfirmed`),
+`from` and `to` on `emptied_at`. Items are like `rest/collection.json`.
 
 ### `GET /api/alerts`
 
@@ -1280,6 +1338,8 @@ reading fails with the code above.
 | `GET /api/stats/overview` | `rest/stats-overview.json` | yes |
 | `GET /api/bins/{id}/quality` | `rest/quality.json` | yes |
 | `GET /api/bins/{id}/rejected` | `rest/rejected-page.json` | yes |
+| `POST /api/collections` request | `rest/collection-request.json` | yes |
+| `POST /api/collections` response | `rest/collection.json` | yes |
 | `GET /api/alerts` | `rest/alerts-page.json` | yes |
 | WebSocket ping | `ws/ping.json` | yes |
 | WebSocket `bin_updated` | `ws/bin_updated.json` | yes |

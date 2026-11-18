@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, bins, me, quality, stats, ws
+from app.api import auth, bins, collections, me, quality, stats, ws
 from app.config import settings
 from app.core import events
 from app.core.errors import add_error_handlers
@@ -43,6 +43,7 @@ app.include_router(auth.router)
 app.include_router(me.router)
 app.include_router(bins.router)
 app.include_router(quality.router)
+app.include_router(collections.router)
 app.include_router(stats.router)
 app.include_router(ws.router)
 

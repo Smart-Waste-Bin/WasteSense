@@ -8,6 +8,7 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.collections.service import confirm_with_reading
 from app.core import events
 from app.ingest.validation import bin_id_from_topic, check_reading, is_late
 from app.models import Bin, Reading, RejectedReading, Setting
@@ -88,6 +89,8 @@ def handle_reading(session: Session, topic: str, payload: bytes, now: datetime) 
         the_bin.last_fill = Decimal(int(reading.fill))
         the_bin.last_battery = None if reading.battery is None else Decimal(reading.battery)
     refresh_bin(session, the_bin, now)
+    # BE-08: this reading may prove a recent collection emptied the bin.
+    confirm_with_reading(session, reading.bin_id, int(reading.fill), taken_at, now)
 
     session.commit()
     # last_seen_at always changes, so dashboards always get the update.
