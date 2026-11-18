@@ -1,0 +1,16 @@
+{
+  "bin_id": "BIN-001",
+  "from": "2026-11-06T08:30:00Z",
+  "to": "2026-11-07T08:30:00Z",
+  "interval_s": 300,
+  "received": 279,
+  "expected": 288,
+  "missing": 9,
+  "duplicates": 2,
+  "late": 6,
+  "rejected": 3,
+  "rejected_by_reason": {
+    "fill_out_of_range": 2,
+    "bad_timestamp": 1
+  }
+}

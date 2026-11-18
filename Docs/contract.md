@@ -7,10 +7,10 @@ to each other. If the code and this file disagree, this file wins and the code g
 
 | | |
 | --- | --- |
-| Version | 1.4 |
+| Version | 1.5 |
 | Date | 2026-11-18 |
 | Status | Draft - awaiting approval |
-| Tickets | SET-03 (FR-04, FR-15), AUTH-01 (FR-24, FR-26, FR-27), BE-02 (FR-10, FR-11), BE-04 (FR-15, FR-33) |
+| Tickets | SET-03 (FR-04, FR-15), AUTH-01 (FR-24, FR-26, FR-27), BE-02 (FR-10, FR-11), BE-04 (FR-15, FR-33), BE-07 (FR-13, FR-34) |
 
 ### Approval
 
@@ -38,6 +38,7 @@ to each other. If the code and this file disagree, this file wins and the code g
 | 1.2 | BE-02 | A duplicate reading is saved in `rejected_readings` with reason `duplicate`, so it can be counted. It is still not saved in `readings`. Nothing changes for devices. |
 | 1.3 | BE-04 | Locations are `{lat, lng}` instead of `{lat, lon}` (the BE-04 ticket says `lng`). New `GET /api/stats/overview`. `GET /api/bins/{id}/readings` takes `bucket=raw\|hour`, and its `size` goes up to 1000 so 30 days of hours fit in one page. `GET /api/bins` takes `q` (search in ID and name). The contract was never approved and no frontend code used `lon`, so the rename is 1.3, not 2.0. |
 | 1.4 | BE-06 | Real-time monitoring: the device measures about every second and sends a reading when `fill` changes by 2 or more, plus a heartbeat reading if nothing was sent for `reporting_interval_s` (section 3). Message format unchanged, so nothing changes for the backend or the frontend. |
+| 1.5 | BE-07 | New `GET /api/bins/{id}/quality` (received, expected, missing, duplicates, late, rejected) and `GET /api/bins/{id}/rejected` (the messages that were not stored, with their reason). |
 
 ## 1. Naming and common rules
 
@@ -806,6 +807,8 @@ A collector never writes bins, trucks, users or settings, and never plans a rout
 | bins | `DELETE /api/bins/{id}` | Delete a bin (soft delete, sets `deleted_at`) | A S |
 | readings | `GET /api/bins/{id}/readings` | Fill history, `?from=&to=&bucket=raw\|hour` (paged) | A S |
 | stats | `GET /api/stats/overview` | Numbers for the dashboard overview cards | A S |
+| quality | `GET /api/bins/{id}/quality` | Data quality for one bin, `?from=&to=` | A S |
+| quality | `GET /api/bins/{id}/rejected` | Messages not stored, with the reason, `?from=&to=&reason=` (paged) | A S |
 | alerts | `GET /api/alerts` | List alerts, `?state=&type=&bin_id=` (paged) | A S |
 | alerts | `POST /api/alerts/{id}/acknowledge` | Mark an alert as seen | A S |
 | alerts | `POST /api/alerts/{id}/resolve` | Close an alert | A S |
@@ -958,6 +961,73 @@ The numbers on the dashboard's overview cards. File `rest/stats-overview.json`:
 - `collections_today`: collections since 00:00 UTC today (Ghana is UTC+0).
 - `distance_saved_week_m`: for routes completed this week (from Monday 00:00 UTC), the sum of
   `baseline_fixed_m - total_distance_m`, in metres. Routes without a baseline are left out. `0` when none.
+
+### `GET /api/bins/{id}/quality`
+
+How complete and trustworthy one bin's data is, for the data quality card. `from` and `to` as
+for readings (default the last 24 h; `to` never goes past now). File `rest/quality.json`:
+
+```json
+{
+  "bin_id": "BIN-001",
+  "from": "2026-11-06T08:30:00Z",
+  "to": "2026-11-07T08:30:00Z",
+  "interval_s": 300,
+  "received": 279,
+  "expected": 288,
+  "missing": 9,
+  "duplicates": 2,
+  "late": 6,
+  "rejected": 3,
+  "rejected_by_reason": {
+    "fill_out_of_range": 2,
+    "bad_timestamp": 1
+  }
+}
+```
+
+| Field | Meaning |
+| --- | --- |
+| `received` | Readings stored, by when they were taken (`ts`) |
+| `expected` | (`to` - `from`) / `interval_s`, counted from when the bin was added if that is later. A healthy bin sends at least this many (the heartbeat, section 3); a bin that sends on change sends more |
+| `missing` | `expected - received`, never below 0 |
+| `duplicates` | Messages with a `seq` already stored (section 4), by when they arrived |
+| `late` | Stored readings flagged late (section 4) |
+| `rejected` | Messages not stored for any other reason, by when they arrived. `rejected_by_reason` splits them by reason code |
+
+Rejected messages and duplicates are counted by arrival time because their `ts` can't be
+trusted, and they are matched on the topic `bins/{id}/readings` because a malformed message may
+have no `bin_id`.
+
+### `GET /api/bins/{id}/rejected`
+
+The messages behind `duplicates` and `rejected`, newest first, for the "Rejected: reason" tags in
+the readings table. `?reason=` keeps one reason. `raw` is the message as it arrived (a JSON
+object, or the text when it was not JSON). Late readings are in the normal readings list with
+`is_late = true` ("Delivered late"). File `rest/rejected-page.json`:
+
+```json
+{
+  "items": [
+    {
+      "id": 88,
+      "reason": "fill_out_of_range",
+      "received_at": "2026-11-07T08:30:01Z",
+      "raw": {
+        "bin_id": "BIN-001",
+        "fill": 120,
+        "distance_cm": 1.0,
+        "battery": 95,
+        "rssi": -61,
+        "seq": 1043,
+        "ts": "2026-11-07T08:30:00Z",
+        "fw": "1.0.0"
+      }
+    }
+  ],
+  "total": 1
+}
+```
 
 ### `GET /api/alerts`
 
@@ -1208,6 +1278,8 @@ reading fails with the code above.
 | `GET /api/bins/{id}/readings` (raw) | `rest/readings-raw.json` | yes |
 | `GET /api/bins/{id}/readings` (hour) | `rest/readings-hour.json` | yes |
 | `GET /api/stats/overview` | `rest/stats-overview.json` | yes |
+| `GET /api/bins/{id}/quality` | `rest/quality.json` | yes |
+| `GET /api/bins/{id}/rejected` | `rest/rejected-page.json` | yes |
 | `GET /api/alerts` | `rest/alerts-page.json` | yes |
 | WebSocket ping | `ws/ping.json` | yes |
 | WebSocket `bin_updated` | `ws/bin_updated.json` | yes |

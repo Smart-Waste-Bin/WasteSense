@@ -1,0 +1,20 @@
+{
+  "items": [
+    {
+      "id": 88,
+      "reason": "fill_out_of_range",
+      "received_at": "2026-11-07T08:30:01Z",
+      "raw": {
+        "bin_id": "BIN-001",
+        "fill": 120,
+        "distance_cm": 1.0,
+        "battery": 95,
+        "rssi": -61,
+        "seq": 1043,
+        "ts": "2026-11-07T08:30:00Z",
+        "fw": "1.0.0"
+      }
+    }
+  ],
+  "total": 1
+}
