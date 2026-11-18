@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     mqtt_test_device_password: str = "change-me-device"
     mqtt_sim_user: str = "smartbin-simulator"
     mqtt_sim_password: str = "change-me-sim"
+    # The backend listens on MQTT while it runs. Tests turn this off (tests/conftest.py).
+    mqtt_ingest_enabled: bool = True
 
     jwt_secret: str = "change-me-to-a-long-random-string"
     access_token_minutes: int = 60

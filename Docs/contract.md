@@ -7,10 +7,10 @@ to each other. If the code and this file disagree, this file wins and the code g
 
 | | |
 | --- | --- |
-| Version | 1.1 |
-| Date | 2026-11-15 |
+| Version | 1.2 |
+| Date | 2026-11-18 |
 | Status | Draft - awaiting approval |
-| Tickets | SET-03 (FR-04, FR-15), AUTH-01 (FR-24, FR-26, FR-27) |
+| Tickets | SET-03 (FR-04, FR-15), AUTH-01 (FR-24, FR-26, FR-27), BE-02 (FR-10, FR-11) |
 
 ### Approval
 
@@ -35,6 +35,7 @@ to each other. If the code and this file disagree, this file wins and the code g
 | --- | --- | --- |
 | 1.0 | SET-03 | First version. |
 | 1.1 | AUTH-01 | Login takes `login` (email or phone) instead of `email`. Access tokens last 60 minutes, plus refresh tokens (`/api/auth/refresh`, `/api/auth/logout`). `user` has `phone`. New error codes for auth, and 423 for a locked account. Write rule for roles (section 6): bin create/delete and truck writes are now admin and supervisor. 1.0 was never approved and no code used its login, so the renamed field is 1.1, not 2.0. |
+| 1.2 | BE-02 | A duplicate reading is saved in `rejected_readings` with reason `duplicate`, so it can be counted. It is still not saved in `readings`. Nothing changes for devices. |
 
 ## 1. Naming and common rules
 
@@ -337,7 +338,7 @@ If the payload is not valid JSON, `raw` holds it as a JSON string.
 
 | Case | Rule | What the backend does | Example |
 | --- | --- | --- | --- |
-| duplicate | Same (`bin_id`, `seq`) seen before | Ignored (not saved again) and counted | `bad/duplicate.json` (same as `mqtt/reading.json`, sent twice) |
+| duplicate | Same (`bin_id`, `seq`) seen before | Not saved in `readings` again. Saved in `rejected_readings` with reason `duplicate`, so it can be counted | `bad/duplicate.json` (same as `mqtt/reading.json`, sent twice) |
 | late | `received_at - ts` is more than 2 x `reporting_interval_s` (default 2 x 300 s = 10 minutes) | Saved with `is_late = true` | `bad/late.json` (taken `08:15`, received `08:31`) |
 
 A late reading still updates the bin's history, but it does not change `last_fill` if a newer reading is already saved.
