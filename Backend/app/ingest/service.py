@@ -8,9 +8,11 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core import events
 from app.ingest.validation import bin_id_from_topic, check_reading, is_late
 from app.models import Bin, Reading, RejectedReading, Setting
 from app.models.enums import BinStatus
+from app.status.engine import bin_updated_data, refresh_bin
 
 log = logging.getLogger(__name__)
 
@@ -85,8 +87,11 @@ def handle_reading(session: Session, topic: str, payload: bytes, now: datetime) 
     if newer_saved is None:
         the_bin.last_fill = Decimal(int(reading.fill))
         the_bin.last_battery = None if reading.battery is None else Decimal(reading.battery)
+    refresh_bin(session, the_bin, now)
 
     session.commit()
+    # last_seen_at always changes, so dashboards always get the update.
+    events.emit("bin_updated", bin_updated_data(the_bin))
     return "stored"
 
 
@@ -107,17 +112,22 @@ def handle_status(
         log.info("Bad status message on %s, ignored", topic)
         return "malformed"
 
+    changed = False
     if state == "online":
         # A retained message is old news from before we connected, so it says nothing about now.
         if not retained:
             the_bin.last_seen_at = now
+            changed = True
     elif state == "offline":
         # Maintenance wins over every other status.
-        if not the_bin.maintenance:
+        if not the_bin.maintenance and the_bin.status != BinStatus.OFFLINE.value:
             the_bin.status = BinStatus.OFFLINE.value
+            changed = True
     else:
         log.info("Unknown state %r on %s, ignored", state, topic)
         return "malformed"
 
     session.commit()
+    if changed:
+        events.emit("bin_updated", bin_updated_data(the_bin))
     return state

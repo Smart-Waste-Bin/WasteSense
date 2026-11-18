@@ -8,6 +8,7 @@ from app.config import settings
 from app.core.errors import add_error_handlers
 from app.db import SessionLocal
 from app.ingest.mqtt_client import Ingestor
+from app.status.scheduler import start_status_job
 
 
 @asynccontextmanager
@@ -15,7 +16,10 @@ async def lifespan(app: FastAPI):
     ingestor = Ingestor(SessionLocal) if settings.mqtt_ingest_enabled else None
     if ingestor:
         ingestor.start()
+    scheduler = start_status_job() if settings.status_job_enabled else None
     yield
+    if scheduler:
+        scheduler.shutdown(wait=False)
     if ingestor:
         ingestor.stop()
 
