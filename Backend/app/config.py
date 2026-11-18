@@ -28,6 +28,8 @@ class Settings(BaseSettings):
     mqtt_ingest_enabled: bool = True
     # The every-60-s offline check (BE-03). Tests turn this off too.
     status_job_enabled: bool = True
+    # WebSocket heartbeat (BE-05, contract section 7). Tests make it shorter.
+    ws_ping_interval_s: float = 25
 
     jwt_secret: str = "change-me-to-a-long-random-string"
     access_token_minutes: int = 60
