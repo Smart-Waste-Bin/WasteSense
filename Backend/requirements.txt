@@ -8,3 +8,4 @@ pydantic-settings
 ortools
 alembic
 pwdlib[argon2]
+pyjwt

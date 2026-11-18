@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # The single .env lives in the repo root. Inside Docker, compose passes
@@ -25,12 +26,38 @@ class Settings(BaseSettings):
     mqtt_sim_password: str = "change-me-sim"
 
     jwt_secret: str = "change-me-to-a-long-random-string"
+    access_token_minutes: int = 60
+    refresh_token_days: int = 7
+    lockout_max_attempts: int = 5
+    lockout_window_min: int = 10
+    lockout_minutes: int = 10
+    # False on laptops (plain http). Set true when deployed with HTTPS.
+    cookie_secure: bool = False
+
     cors_origins: str = "http://localhost:5173,http://localhost:8081"
     osrm_url: str = "https://router.project-osrm.org"
 
     seed_admin_password: str = ""
     seed_supervisor_password: str = ""
     seed_collector_password: str = ""
+
+    @field_validator("jwt_secret")
+    @classmethod
+    def jwt_secret_long_enough(cls, value: str) -> str:
+        if len(value) < 32:
+            raise ValueError(
+                "JWT_SECRET must be at least 32 characters. Make one with: "
+                'python -c "import secrets; print(secrets.token_urlsafe(48))"'
+            )
+        return value
+
+    @field_validator("cors_origins")
+    @classmethod
+    def no_wildcard_origin(cls, value: str) -> str:
+        # The refresh cookie needs allow_credentials=True, which must never be combined with "*".
+        if "*" in value:
+            raise ValueError("CORS_ORIGINS must list real origins, not '*'")
+        return value
 
     @property
     def cors_origin_list(self) -> list[str]:
