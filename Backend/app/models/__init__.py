@@ -5,7 +5,7 @@ from app.models.bins import Bin
 from app.models.readings import Reading, RejectedReading
 from app.models.routes import Collection, CollectorLocation, Route, RouteStop, Truck
 from app.models.settings import Setting
-from app.models.users import User
+from app.models.users import RefreshToken, User
 
 __all__ = [
     "Alert",
@@ -15,6 +15,7 @@ __all__ = [
     "CollectorLocation",
     "Notification",
     "Reading",
+    "RefreshToken",
     "RejectedReading",
     "Route",
     "RouteStop",
