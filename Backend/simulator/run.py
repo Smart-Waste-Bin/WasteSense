@@ -13,6 +13,7 @@ import argparse
 import csv
 import json
 import logging
+import signal
 import sys
 import threading
 import time
@@ -89,8 +90,11 @@ def api(method: str, path: str, token: str | None = None, body: dict | None = No
         return error.code, json.loads(error.read() or b"null")
 
 
-def register_missing_bins(rows: list[dict]) -> list[dict]:
-    """Add any bin the backend doesn't know yet. Returns the bins that can be simulated."""
+def register_missing_bins(rows: list[dict], last_fills: dict[str, float]) -> list[dict]:
+    """Add any bin the backend doesn't know yet. Returns the bins that can be simulated.
+
+    Also fills last_fills with each known bin's last fill, so a restart carries on from there.
+    """
     if not settings.seed_supervisor_password:
         raise SetupError(
             "SEED_SUPERVISOR_PASSWORD is not set in .env, so I can't log in to the API."
@@ -106,8 +110,10 @@ def register_missing_bins(rows: list[dict]) -> list[dict]:
 
     usable = []
     for row in rows:
-        status, _ = api("GET", f"/api/bins/{row['id']}", token)
+        status, known = api("GET", f"/api/bins/{row['id']}", token)
         if status == 200:
+            if known.get("last_fill") is not None:
+                last_fills[row["id"]] = known["last_fill"]
             usable.append(row)
             continue
         new_bin = {
@@ -203,6 +209,10 @@ def parse_args(argv=None):
     return args
 
 
+def stop_on_sigterm(signum, frame):
+    raise KeyboardInterrupt
+
+
 def main(argv=None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
     args = parse_args(argv)
@@ -210,14 +220,19 @@ def main(argv=None) -> int:
         scenario = load_scenario(args.scenario)
         rows = choose_bins(load_bins(), args.bins)
         check_scenario_bins(scenario, rows)
-        if not args.no_register:
-            rows = register_missing_bins(rows)
     except (SetupError, ScenarioError, OSError) as error:
         print(f"Simulator not started: {error}", file=sys.stderr)
         return 1
+    last_fills: dict[str, float] = {}
+    if not args.no_register:
+        try:
+            rows = register_missing_bins(rows, last_fills)
+        except (SetupError, OSError) as error:
+            # The bins are usually there already (the seed adds them), so carry on.
+            log.warning("Could not register missing bins, carrying on without: %s", error)
 
     sim_start = scenario.start or datetime.now(UTC)
-    sim = Simulation(rows, scenario, sim_start, load_seqs())
+    sim = Simulation(rows, scenario, sim_start, load_seqs(), last_fills)
     lock = threading.Lock()
     client = make_client(sim, lock)
     client.connect(settings.mqtt_host, settings.mqtt_port, keepalive=30)
@@ -233,6 +248,8 @@ def main(argv=None) -> int:
         scenario.fixed_seed,
     )
 
+    # docker compose stop/down sends SIGTERM: stop the same way as Ctrl+C.
+    signal.signal(signal.SIGTERM, stop_on_sigterm)
     publish(client, sim.hello())
     began = time.monotonic()
     step = 0

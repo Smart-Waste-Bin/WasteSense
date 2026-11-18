@@ -5,10 +5,16 @@ so the system can be tested and evaluated across Kumasi with only one piece of h
 
 ## Run it
 
-The backend container has everything it needs (packages and `.env` values):
+`docker compose up` starts it as the `simulator` service: every simulated bin, real-time speed,
+the default scenario. Its log: `docker compose logs -f simulator`.
+
+For a fast or special run, stop that one first (two simulators would send for the same bins),
+then run it by hand in the backend container:
 
 ```bash
+docker compose stop simulator
 docker compose exec backend python -m simulator.run --speed 144 --hours 24
+docker compose start simulator     # back to the normal one afterwards
 ```
 
 | Option | Default | Meaning |
@@ -54,7 +60,9 @@ every other bin is **residential**. A scenario can choose a different profile pe
 - **Randomness:** each reading's growth is the rate x 0.7 to 1.3.
 - **Sensor noise:** the distance wobbles by up to +-1.5 cm, so `fill` wobbles by about +-1.5 %.
 - **Sudden jumps:** someone empties a big load of rubbish into the bin.
-- **Start:** each bin starts between 0 and 40 % full.
+- **Start:** a bin starts at its `start_fill` from the scenario if set; otherwise it carries on
+  from its last fill in the backend (so restarting Docker doesn't reset the bins); otherwise a
+  random 0 to 40 % (the same every run with a fixed seed).
 
 Over a weekday that adds up to:
 
@@ -74,6 +82,7 @@ A scenario file (YAML) sets:
 | `fixed_seed` | Same seed = the same fill data every run. Remove it for random data. |
 | `interval_s` | Simulated seconds between readings |
 | `start` | Simulated start time in UTC (e.g. `2026-11-16T06:00:00Z`), or `null` for now |
+| `start_fill` | Fill (%) per bin at the start, e.g. `{BIN-002: 88}` |
 | `profiles` | Profile per bin, e.g. `{BIN-006: market}` |
 | `outages` | `{bin, start, minutes}`: the bin goes offline, keeps its readings and sends them when it is back |
 | `faulty` | `{bin, mode, start, minutes}`: a broken sensor. `minutes` left out = until the end |
@@ -89,6 +98,20 @@ Faulty modes:
 | `out_of_range` | Sends a fill above 100 | Rejects it as `fill_out_of_range` |
 
 `simulator/scenarios/outage-and-faulty.yaml` has one of each, for testing.
+
+## Demo day
+
+```bash
+docker compose stop simulator
+docker compose exec backend python -m simulator.run --speed 60 --scenario simulator/scenarios/demo.yaml
+```
+
+- `--speed 60`: one simulated hour per real minute, so each bin sends every 5 s and visibly fills.
+- `demo.yaml` starts the bins at a spread of levels (Normal, Filling, Due and Urgent all on the
+  map at once) at a weekday lunchtime, and BIN-011 drops offline for a minute after 3 minutes.
+- The real bin sends on change (contract section 3, v1.4), so rubbish put in shows on the
+  dashboard within a few seconds.
+- Afterwards: Ctrl+C, then `docker compose start simulator` for the normal real-time one.
 
 ## Things to know
 

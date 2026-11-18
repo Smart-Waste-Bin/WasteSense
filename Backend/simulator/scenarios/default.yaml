@@ -10,6 +10,11 @@ interval_s: 300
 # start: 2026-11-16T06:00:00Z
 start: null
 
+# Fill (%) per bin at the start. Bins not listed carry on from their last fill in the
+# backend, or start at a random 0-40 % if the backend has none.
+start_fill: {}
+#  BIN-002: 85
+
 # Profile per bin. Default: "Market" in the name -> market, otherwise residential.
 # Profiles are described in Docs/simulator.md.
 profiles: {}

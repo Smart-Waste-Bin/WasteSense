@@ -274,6 +274,14 @@ def load_data_files() -> tuple[list[dict[str, Any]], dict[str, Any]]:
 def main() -> None:
     from app.db import SessionLocal
 
+    # docker compose runs `seed --if-empty` on every start: it seeds a brand-new database only,
+    # so changes made later through the API (settings, bins, passwords) are never undone.
+    if "--if-empty" in sys.argv[1:]:
+        with SessionLocal() as session:
+            if session.scalar(select(func.count()).select_from(User)):
+                print("Seed skipped: the database already has users.")
+                return
+
     passwords = passwords_from_settings()
     bins, depot = load_data_files()
     with SessionLocal() as session:

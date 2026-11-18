@@ -86,14 +86,20 @@ class Simulation:
         scenario: Scenario,
         start: datetime,
         last_seqs: dict[str, int] | None = None,
+        last_fills: dict[str, float] | None = None,
     ):
+        """Each bin starts at: the scenario's start_fill, else its last fill in the backend
+        (so a restart carries on where it was), else a random 0-40 %."""
         self.scenario = scenario
         self.start = start
         last_seqs = last_seqs or {}
+        last_fills = last_fills or {}
         self.bins: dict[str, SimBin] = {}
         for row in rows:
             seed = f"{scenario.fixed_seed}-{row['id']}" if scenario.fixed_seed is not None else None
             rng = random.Random(seed)
+            random_start = rng.uniform(0, 40)  # always drawn, so the seed gives the same data
+            start_fill = scenario.start_fill.get(row["id"], last_fills.get(row["id"]))
             profile = PROFILES[scenario.profiles.get(row["id"], default_profile(row["name"]))]
             self.bins[row["id"]] = SimBin(
                 id=row["id"],
@@ -102,7 +108,7 @@ class Simulation:
                 profile=profile,
                 rng=rng,
                 seq=last_seqs.get(row["id"], 0),
-                fill=rng.uniform(0, 40),  # bins start the day part full
+                fill=float(start_fill) if start_fill is not None else random_start,
             )
 
     def seqs(self) -> dict[str, int]:

@@ -76,7 +76,11 @@ from the seed (`python -m scripts.seed`, passwords from `SEED_*_PASSWORD` in `.e
 
 ## Run the simulator
 
+`docker compose up` starts it (service `simulator`, real time). For a fast run, stop that one
+first so two simulators don't send for the same bins:
+
 ```bash
+docker compose stop simulator
 docker compose exec backend python -m simulator.run --speed 144 --hours 24
 ```
 

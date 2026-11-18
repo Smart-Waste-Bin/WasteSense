@@ -136,3 +136,44 @@ def test_real_data_files_are_checked_the_same_way():
         except SeedDataError as error:
             for problem in str(error).splitlines():
                 assert "is still" in problem, problem
+
+
+# --- seed --if-empty (run by docker compose on every start, BE-06) ---
+
+
+@pytest.fixture
+def seed_main(migrated_engine, monkeypatch):
+    from sqlalchemy.orm import sessionmaker
+
+    import app.db
+    from app.config import settings
+    from scripts import seed
+
+    monkeypatch.setattr(app.db, "SessionLocal", sessionmaker(migrated_engine))
+    for role in ("admin", "supervisor", "collector"):
+        monkeypatch.setattr(settings, f"seed_{role}_password", f"{role}-pass-123")
+
+    def run(*args):
+        monkeypatch.setattr("sys.argv", ["seed", *args])
+        seed.main()
+
+    return run
+
+
+def test_if_empty_seeds_a_new_database(seed_main, migrated_engine, capsys):
+    seed_main("--if-empty")
+    assert "Seed done" in capsys.readouterr().out
+    with Session(migrated_engine) as session:
+        assert session.scalar(select(func.count()).select_from(User)) == 3
+
+
+def test_if_empty_leaves_a_used_database_alone(seed_main, migrated_engine, capsys):
+    seed_main()
+    with Session(migrated_engine) as session:
+        session.get(Setting, "due_threshold").value = 55  # changed later through the API
+        session.commit()
+
+    seed_main("--if-empty")
+    assert "Seed skipped" in capsys.readouterr().out
+    with Session(migrated_engine) as session:
+        assert session.get(Setting, "due_threshold").value == 55

@@ -321,3 +321,39 @@ def test_spike_sensor_jumps_around():
     jumps = [abs(b - a) for a, b in zip(fills, fills[1:])]
     assert max(jumps) > 20
     assert all(0 <= fill <= 100 for fill in fills)  # spikes are bad data, but not rejected
+
+
+# --- Where a bin starts ---
+
+
+def test_start_fill_beats_last_fill_beats_random():
+    scenario = Scenario(fixed_seed=1, start_fill={"BIN-002": 88})
+    sim = Simulation(ROWS, scenario, MONDAY_6AM, last_fills={"BIN-002": 10, "BIN-003": 64})
+    assert sim.bins["BIN-002"].fill == 88  # scenario
+    assert sim.bins["BIN-003"].fill == 64  # carries on from the backend after a restart
+    fresh = Simulation(ROWS, Scenario(fixed_seed=1), MONDAY_6AM)
+    assert 0 <= fresh.bins["BIN-003"].fill <= 40  # random start
+
+
+def test_start_fill_doesnt_change_the_rest_of_the_seeded_data():
+    plain = run_steps(Simulation(ROWS, Scenario(fixed_seed=1), MONDAY_6AM), 5)
+    started = run_steps(
+        Simulation(ROWS, Scenario(fixed_seed=1, start_fill={"BIN-002": 50}), MONDAY_6AM), 5
+    )
+    assert [readings(s)[1] for s in plain] == [readings(s)[1] for s in started]  # BIN-003
+
+
+def test_bad_start_fill_is_explained():
+    with pytest.raises(ScenarioError, match="start_fill"):
+        parse_scenario({"start_fill": {"BIN-002": 120}})
+
+
+def test_demo_scenario_shows_every_status_at_the_start():
+    demo = load_scenario(SCENARIOS / "demo.yaml")
+    fills = demo.start_fill.values()
+    assert any(f < 50 for f in fills)
+    assert any(50 <= f < 70 for f in fills)
+    assert any(70 <= f < 90 for f in fills)
+    assert any(f >= 90 for f in fills)
+    rows = run.choose_bins(run.load_bins(), None)
+    run.check_scenario_bins(demo, rows)  # every bin it names is simulated

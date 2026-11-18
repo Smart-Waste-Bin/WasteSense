@@ -1,6 +1,10 @@
-# Local dev stack: database, MQTT broker and backend.
+# Local dev stack: database, MQTT broker, backend and bin simulator.
 # Before the first start: put the team .env in the repo root (or cp .env.example .env).
-# The mqtt-setup service makes the broker's certs and passwords for you.
+# Then `docker compose up` does the rest:
+#   - mqtt-setup makes the broker's certs and passwords,
+#   - the backend updates the database (alembic upgrade head) and seeds it if it is empty,
+#   - the simulator sends readings for the simulated bins in real time.
+# Stop only the simulator: docker compose stop simulator
 
 services:
   db:
@@ -49,7 +53,12 @@ services:
 
   backend:
     build: ./Backend
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    # Migrations every start (safe), seed only into an empty database, then the API.
+    # A failed seed doesn't stop the API; its message says what to fix.
+    command: >
+      sh -c "alembic upgrade head &&
+             { python -m scripts.seed --if-empty || echo 'Seed skipped, see the message above'; } &&
+             exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
     env_file: .env
     ports:
       - "8000:8000"
@@ -66,6 +75,21 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
+
+  # Virtual bins (BE-06, Docs/simulator.md). Real-time speed, default scenario.
+  # For a fast run use: docker compose exec backend python -m simulator.run --speed 144 --hours 24
+  # (stop this one first, so two simulators don't send for the same bins).
+  simulator:
+    build: ./Backend
+    command: python -m simulator.run --speed 1
+    env_file: .env
+    environment:
+      SIM_API_URL: http://backend:8000
+    volumes:
+      - ./Backend:/app
+    depends_on:
+      backend:
+        condition: service_healthy
 
 volumes:
   db-data:

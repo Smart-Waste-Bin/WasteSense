@@ -9,7 +9,7 @@ import yaml
 from simulator.profiles import PROFILES
 
 FAULT_MODES = {"stuck", "spike", "out_of_range"}
-KEYS = {"fixed_seed", "interval_s", "start", "profiles", "outages", "faulty"}
+KEYS = {"fixed_seed", "interval_s", "start", "start_fill", "profiles", "outages", "faulty"}
 
 
 class ScenarioError(ValueError):
@@ -36,6 +36,7 @@ class Scenario:
     fixed_seed: int | None = None
     interval_s: int = 300
     start: datetime | None = None  # simulated start time; None = now
+    start_fill: dict[str, float] = field(default_factory=dict)  # % per bin at the start
     profiles: dict[str, str] = field(default_factory=dict)
     outages: list[Window] = field(default_factory=list)
     faulty: list[Window] = field(default_factory=list)
@@ -50,7 +51,9 @@ class Scenario:
         return None
 
     def bins_named(self) -> set[str]:
-        return set(self.profiles) | {w.bin for w in self.outages + self.faulty}
+        return (
+            set(self.profiles) | set(self.start_fill) | {w.bin for w in self.outages + self.faulty}
+        )
 
 
 def window(item: dict, where: str, needs_minutes: bool, with_mode: bool) -> Window:
@@ -84,6 +87,11 @@ def parse_scenario(data: dict | None) -> Scenario:
         if name not in PROFILES:
             raise ScenarioError(f"profiles: {bin_id} has unknown profile {name!r}")
 
+    start_fill = data.get("start_fill") or {}
+    for bin_id, fill in start_fill.items():
+        if not isinstance(fill, int | float) or not 0 <= fill <= 100:
+            raise ScenarioError(f"start_fill: {bin_id} must be a number from 0 to 100")
+
     interval_s = data.get("interval_s", 300)
     if not isinstance(interval_s, int) or interval_s <= 0:
         raise ScenarioError("interval_s must be a whole number of seconds above 0")
@@ -92,6 +100,7 @@ def parse_scenario(data: dict | None) -> Scenario:
         fixed_seed=data.get("fixed_seed"),
         interval_s=interval_s,
         start=start,
+        start_fill=start_fill,
         profiles=profiles,
         outages=[window(i, "outages", True, False) for i in data.get("outages") or []],
         faulty=[window(i, "faulty", False, True) for i in data.get("faulty") or []],
