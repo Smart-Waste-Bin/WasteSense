@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, me
+from app.api import auth, bins, me, stats
 from app.config import settings
 from app.core.errors import add_error_handlers
 from app.db import SessionLocal
@@ -37,6 +37,8 @@ add_error_handlers(app)
 
 app.include_router(auth.router)
 app.include_router(me.router)
+app.include_router(bins.router)
+app.include_router(stats.router)
 
 
 @app.get("/api/health")
