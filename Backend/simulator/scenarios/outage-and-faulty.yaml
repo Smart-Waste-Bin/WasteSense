@@ -1,0 +1,14 @@
+# Test scenario for the BE-06 acceptance checks:
+# - BIN-003 goes offline after 1 simulated hour for 30 simulated minutes, then recovers.
+# - BIN-004 sends out-of-range fills for the first 2 simulated hours (rejected readings).
+# - BIN-005 has a stuck sensor and BIN-006 random spikes, from hour 3.
+fixed_seed: 7
+interval_s: 300
+start: null
+profiles: {}
+outages:
+  - {bin: BIN-003, start: 60, minutes: 30}
+faulty:
+  - {bin: BIN-004, mode: out_of_range, start: 0, minutes: 120}
+  - {bin: BIN-005, mode: stuck, start: 180}
+  - {bin: BIN-006, mode: spike, start: 180}

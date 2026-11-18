@@ -51,3 +51,6 @@ Backend/Infra/mosquitto/passwd
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Simulator: last seq per bin (like a device's flash memory)
+Backend/simulator/.seq.json

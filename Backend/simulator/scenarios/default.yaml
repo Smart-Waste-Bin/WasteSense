@@ -1,0 +1,26 @@
+# Simulator scenario (BE-06). Times are simulated minutes after the run starts.
+
+# Same seed -> the same fill data every run. Remove it (or set null) for random data.
+fixed_seed: 42
+
+# Simulated seconds between readings (the contract's default reporting_interval_s).
+interval_s: 300
+
+# Simulated start time (UTC). null = now. Pick a weekday morning to see the busy hours:
+# start: 2026-11-16T06:00:00Z
+start: null
+
+# Profile per bin. Default: "Market" in the name -> market, otherwise residential.
+# Profiles are described in Docs/simulator.md.
+profiles: {}
+#  BIN-006: market
+
+# The bin drops off (the broker sends its last will), keeps its readings, and sends them
+# when it comes back.
+outages: []
+#  - {bin: BIN-003, start: 60, minutes: 30}
+
+# A broken sensor. mode: stuck (same distance every time), spike (random bad echoes),
+# out_of_range (fill above 100, rejected by the backend). Leave out minutes = until the end.
+faulty: []
+#  - {bin: BIN-004, mode: out_of_range, start: 0, minutes: 120}
