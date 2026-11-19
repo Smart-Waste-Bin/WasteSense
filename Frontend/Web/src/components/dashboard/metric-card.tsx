@@ -1,4 +1,3 @@
-import type { LucideIcon } from "lucide-react";
 import { Card } from "../ui/card";
 
 type MetricCardProps = {
@@ -6,34 +5,20 @@ type MetricCardProps = {
   value: string;
   change: string;
   suffix: string;
-  icon: LucideIcon;
-  iconColor: string;
-  iconBackground: string;
 };
 
-function MetricCard({
-  title,
-  value,
-  change,
-  suffix,
-  icon: Icon,
-  iconColor,
-  iconBackground,
-}: MetricCardProps) {
+function MetricCard({ title, value, change, suffix }: MetricCardProps) {
   return (
     <Card className="p-5">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm font-medium text-slate-500">{title}</p>
-          <p className="mt-3 text-2xl font-bold tracking-tight text-slate-950">
+          <p className="text-xs font-base text-gray-500">{title}</p>
+          <p className="mt-3 text-4xl font-bold tracking-tight text-slate-950">
             {value}
           </p>
         </div>
-        <div className={`rounded-xl p-2.5 ${iconBackground}`}>
-          <Icon size={20} className={iconColor} />
-        </div>
       </div>
-      <p className="mt-4 text-xs text-slate-400">
+      <p className="mt-4 text-xs font-small text-slate-500">
         <span
           className={`mr-1 font-bold ${change.startsWith("-") ? "text-rose-500" : "text-emerald-600"}`}
         >

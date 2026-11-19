@@ -17,7 +17,7 @@ function Navbar({ activePage, onSignOut }: NavbarProps) {
           <Input
             placeholder="Search bins, routes, collectors..."
             aria-label={`${activePage} search`}
-            className="h-8 w-full max-w-[37.5rem] p-4 pl-11"
+            className="h-8 w-220 max-w-[37.5rem] p-4 pl-11"
           />
         </div>
       </div>
