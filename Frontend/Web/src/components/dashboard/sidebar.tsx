@@ -69,8 +69,12 @@ function NavigationItem({
         onClick={handleNavigate}
         className="h-auto rounded-xl px-3 py-3 text-sm font-semibold data-active:bg-emerald-50 data-active:text-emerald-700 data-active:hover:bg-emerald-50"
       >
-        <Icon size={19} strokeWidth={activePage === label ? 2.4 : 2} />
-        <span>{label}</span>
+        <Icon
+          size={19}
+          strokeWidth={activePage === label ? 2.4 : 2}
+          className="shrink-0"
+        />
+        <span className="font-sans ">{label}</span>
       </SidebarMenuButton>
       {badge && (
         <SidebarMenuBadge className="right-3 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500">
@@ -84,11 +88,11 @@ function NavigationItem({
 function Sidebar({ activePage, onNavigate }: SidebarProps) {
   return (
     <ShadcnSidebar className="border-slate-200 bg-white" collapsible="icon">
-      <SidebarHeader className="px-5 py-7">
-        <div className="flex items-center gap-2">
-          <img src={Logo} alt="Logo" className="h-8 w-8 rounded-sm" />
-          <h1 className="text-lg font-bold">
-            Smart<span className="text-emerald-900">Bin</span>
+      <SidebarHeader className="px-5 py-7 group-data-[collapsible=icon]:px-2">
+        <div className="flex items-center justify-start gap-2 group-data-[collapsible=icon]:justify-center">
+          <img src={Logo} alt="Logo" className="h-8 w-8 shrink-0 rounded-sm" />
+          <h1 className="text-lg font-bold group-data-[collapsible=icon]:hidden font-logo tracking-tight text-slate-950">
+            Smart<span className="text-emerald-700">Bin</span>
           </h1>
         </div>
       </SidebarHeader>

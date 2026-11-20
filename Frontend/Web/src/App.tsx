@@ -18,6 +18,7 @@ function App() {
         <Dashboard />
       </SidebarInset>
     </SidebarProvider>
+    
   )
 }
 
