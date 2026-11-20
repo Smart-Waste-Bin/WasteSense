@@ -53,10 +53,6 @@ function SearchBar({
   }, [query, suggestions]);
 
   React.useEffect(() => {
-    setActiveIndex(-1);
-  }, [query]);
-
-  React.useEffect(() => {
     const handleShortcut = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
@@ -70,6 +66,7 @@ function SearchBar({
 
   const updateValue = (nextValue: string) => {
     if (value === undefined) setInternalValue(nextValue);
+    setActiveIndex(-1);
     onChange?.(nextValue);
   };
 

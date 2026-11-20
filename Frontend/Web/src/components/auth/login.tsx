@@ -12,8 +12,8 @@ function Login({ onLogin }: { onLogin: () => void }) {
   };
 
   return (
-    <div className="min-h-screen -m-8 flex justify-center items-center bg-[#f5f5f5] p-6">
-      <main className="flex w-[90%] rounded-lg shadow-lg ">
+    <div className="min-h-screen -my-8 flex justify-center items-center bg-[#f5f5f5] p-6">
+      <main className="flex w-[70%] rounded-lg shadow-lg ">
         <section className="relative hidden  overflow-hidden rounded-l-lg bg-white p-12 text-white lg:flex lg:w-[48%] lg:flex-col lg:justify-between">
           <NotchedHeroCard
             src={Hero}
