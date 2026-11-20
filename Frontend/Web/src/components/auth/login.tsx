@@ -25,7 +25,7 @@ function Login({ onLogin }: { onLogin: () => void }) {
             <div className="flex items-center gap-2 mb-6 ">
               <img src={Logo} className="ml-35  h-10 w-10  rounded-sm" />
               <p className="font-logo tracking-tight text-2xl font-bold text-slate-950">
-                Waste<span className="text-emerald-700">Bin</span>
+                Smart<span className="text-emerald-700">Bin</span>
               </p>
             </div>
 

@@ -1,23 +1,35 @@
-import { Bell, ChevronDown, Search } from "lucide-react";
+import * as React from "react";
+import { Bell, ChevronDown } from "lucide-react";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
 import { SidebarTrigger } from "../ui/sidebar";
-import { Input } from "../ui/input";
+import { SearchBar, type SearchSuggestion } from "../ui/search-bar";
 
 type NavbarProps = { activePage: string; onSignOut: () => void };
 
 function Navbar({ activePage, onSignOut }: NavbarProps) {
+  const [searchQuery, setSearchQuery] = React.useState("");
+  const searchSuggestions: SearchSuggestion[] = [
+    { id: "1", label: "Library entrance", description: "Bin" },
+    { id: "2", label: "Science block", description: "Bin" },
+    { id: "3", label: "Student center", description: "Bin" },
+    { id: "4", label: "Main campus route", description: "Route" },
+    { id: "5", label: "Peter Owusu", description: "Collector" },
+  ];
+
   return (
     <header className="sticky top-0 z-20 flex h-[84px] w-full shrink-0 items-center justify-between border-b border-slate-200 bg-white/90 px-5 backdrop-blur-md sm:px-8">
       <div className="flex min-w-0 items-center gap-3">
         <SidebarTrigger className="size-9 shrink-0 text-slate-500" />
         <Separator orientation="vertical" className="hidden h-6 sm:block" />
-        <div className="min-w-0 flex-1">
-          <Search className="absolute top-7 mx-2 text-gray-400" />
-          <Input
+        <div className="w-[min(37.5rem,50vw)] min-w-0">
+          <SearchBar
+            value={searchQuery}
+            onChange={setSearchQuery}
             placeholder="Search bins, routes, collectors..."
-            aria-label={`${activePage} search`}
-            className="h-8 w-220 max-w-[37.5rem] p-4 pl-11"
+            ariaLabel={`${activePage} search`}
+            suggestions={searchSuggestions}
+            onSelect={(suggestion) => setSearchQuery(suggestion.label)}
           />
         </div>
       </div>
