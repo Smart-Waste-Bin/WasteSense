@@ -1,7 +1,9 @@
 import uuid
 from datetime import UTC, datetime
 
-from pydantic import BaseModel, ConfigDict, field_serializer
+from pydantic import BaseModel, ConfigDict, Field, computed_field, field_serializer
+
+from app.core import storage
 
 
 def utc_z(value: datetime) -> str:
@@ -22,6 +24,12 @@ class UserOut(BaseModel):
 class MeOut(UserOut):
     is_active: bool
     created_at: datetime
+    photo_key: str | None = Field(default=None, exclude=True)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def photo_url(self) -> str | None:
+        return storage.url(self.photo_key)
 
     @field_serializer("created_at")
     def created_at_utc(self, value: datetime) -> str:
