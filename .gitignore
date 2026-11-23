@@ -37,6 +37,9 @@ web-build/
 Backend/Infra/mosquitto/certs/
 Backend/Infra/mosquitto/passwd
 
+# Uploaded profile photos (STORAGE_BACKEND=local)
+Backend/media/
+
 # Env files (keep the examples)
 .env
 .env.*
