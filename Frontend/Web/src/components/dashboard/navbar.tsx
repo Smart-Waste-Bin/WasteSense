@@ -4,10 +4,11 @@ import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
 import { SidebarTrigger } from "../ui/sidebar";
 import { SearchBar, type SearchSuggestion } from "../ui/search-bar";
+import type { AuthUser } from "@/auth";
 
-type NavbarProps = { activePage: string; onSignOut: () => void };
+type NavbarProps = { activePage: string; onSignOut: () => void; user: AuthUser };
 
-function Navbar({ activePage, onSignOut }: NavbarProps) {
+function Navbar({ activePage, onSignOut, user }: NavbarProps) {
   const [searchQuery, setSearchQuery] = React.useState("");
   const searchSuggestions: SearchSuggestion[] = [
     { id: "1", label: "Library entrance", description: "Bin" },
@@ -49,11 +50,11 @@ function Navbar({ activePage, onSignOut }: NavbarProps) {
           className="h-auto gap-2 p-0 hover:bg-transparent sm:gap-3"
         >
           <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-700">
-            JD
+            {user.name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()}
           </span>
           <span className="hidden text-left sm:block">
-            <span className="block text-sm font-bold">Jordan Davis</span>
-            <span className="block text-xs text-slate-400">Administrator</span>
+            <span className="block text-sm font-bold">{user.name}</span>
+            <span className="block text-xs capitalize text-slate-400">{user.role}</span>
           </span>
           <ChevronDown size={16} className="text-slate-400" />
         </Button>

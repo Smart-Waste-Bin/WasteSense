@@ -1,14 +1,30 @@
-import type { FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import NotchedHeroCard from "./NotchedHeroCard";
 import Hero from "@/assets/loginPic.jpeg";
 import Logo from "@/assets/logo.jpg";
+import { login, type AuthUser } from "@/auth";
 
-function Login({ onLogin }: { onLogin: () => void }) {
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+function Login({ onLogin }: { onLogin: (user: AuthUser) => void }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
+  const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    onLogin();
+    setError("");
+    setIsSubmitting(true);
+    try {
+      const user = await login(email, password, rememberMe);
+      onLogin(user);
+    } catch (loginError) {
+      setError(loginError instanceof Error ? loginError.message : "Sign-in failed.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -37,12 +53,15 @@ function Login({ onLogin }: { onLogin: () => void }) {
             </p>
             <form className="mt-9 space-y-5" onSubmit={handleSubmit}>
               <label className="block text-sm font-semibold text-slate-700">
-                Work email
+                Email or phone
                 <Input
                   required
-                  type="email"
-                  placeholder="you@company.com"
+                  type="text"
+                  placeholder="you@company.com or 0241234567"
                   className="mt-2"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  autoComplete="username"
                 />
               </label>
               <label className="block text-sm font-semibold text-slate-700">
@@ -52,6 +71,9 @@ function Login({ onLogin }: { onLogin: () => void }) {
                   type="password"
                   placeholder="Enter your password"
                   className="mt-2"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  autoComplete="current-password"
                 />
               </label>
               <div className="flex items-center justify-between text-sm">
@@ -59,6 +81,8 @@ function Login({ onLogin }: { onLogin: () => void }) {
                   <input
                     type="checkbox"
                     className="size-4 accent-emerald-500"
+                    checked={rememberMe}
+                    onChange={(event) => setRememberMe(event.target.checked)}
                   />{" "}
                   Remember me
                 </label>
@@ -71,10 +95,16 @@ function Login({ onLogin }: { onLogin: () => void }) {
               </div>
               <Button
                 type="submit"
+                disabled={isSubmitting}
                 className="h-12 w-full rounded-xl bg-emerald-500 font-bold text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-600"
               >
-                Sign in to dashboard
+                {isSubmitting ? "Signing in..." : "Sign in to dashboard"}
               </Button>
+              {error && (
+                <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {error}
+                </p>
+              )}
             </form>
             <p className="mt-8 text-center text-sm text-slate-500">
               Need access?{" "}
