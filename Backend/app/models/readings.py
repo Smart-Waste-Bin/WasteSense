@@ -43,7 +43,6 @@ class Reading(Base):
         DateTime(timezone=True), server_default=func.now()
     )
     is_late: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
-    is_duplicate: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
 
 
 class RejectedReading(Base):

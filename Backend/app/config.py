@@ -6,6 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 # The single .env lives in the repo root. Inside Docker, compose passes
 # the values as environment variables instead, so the file is not needed there.
 ROOT_ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
+BACKEND_DIR = Path(__file__).resolve().parents[1]
 
 
 class Settings(BaseSettings):
@@ -24,6 +25,8 @@ class Settings(BaseSettings):
     mqtt_test_device_password: str = "change-me-device"
     mqtt_sim_user: str = "smartbin-simulator"
     mqtt_sim_password: str = "change-me-sim"
+    # The backend listens on MQTT while it runs. Tests turn this off (tests/conftest.py).
+    mqtt_ingest_enabled: bool = True
 
     jwt_secret: str = "change-me-to-a-long-random-string"
     access_token_minutes: int = 60
@@ -36,6 +39,16 @@ class Settings(BaseSettings):
 
     cors_origins: str = "http://localhost:5173,http://localhost:8081"
     osrm_url: str = "https://router.project-osrm.org"
+
+    # Profile photos (AUTH-03). "local" saves them in MEDIA_DIR, "s3" in an AWS S3 bucket.
+    storage_backend: str = "local"
+    media_dir: Path = BACKEND_DIR / "media"
+    s3_bucket: str = ""
+    s3_region: str = ""
+    # Only for S3-compatible storage that is not AWS (e.g. MinIO). Empty for AWS.
+    s3_endpoint_url: str = ""
+    aws_access_key_id: str = ""
+    aws_secret_access_key: str = ""
 
     seed_admin_password: str = ""
     seed_supervisor_password: str = ""
@@ -57,6 +70,13 @@ class Settings(BaseSettings):
         # The refresh cookie needs allow_credentials=True, which must never be combined with "*".
         if "*" in value:
             raise ValueError("CORS_ORIGINS must list real origins, not '*'")
+        return value
+
+    @field_validator("storage_backend")
+    @classmethod
+    def known_storage_backend(cls, value: str) -> str:
+        if value not in ("local", "s3"):
+            raise ValueError('STORAGE_BACKEND must be "local" or "s3"')
         return value
 
     @property

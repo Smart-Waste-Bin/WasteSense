@@ -241,7 +241,16 @@ def test_me(client):
     response = client.get("/api/me", headers=bearer(tokens["access_token"]))
     assert response.status_code == 200
     me = response.json()
-    assert set(me) == {"id", "name", "email", "phone", "role", "is_active", "created_at"}
+    assert set(me) == {
+        "id",
+        "name",
+        "email",
+        "phone",
+        "role",
+        "is_active",
+        "created_at",
+        "photo_url",
+    }
     assert me["role"] == "collector"
     assert me["created_at"].endswith("Z")
 

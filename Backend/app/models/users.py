@@ -41,6 +41,8 @@ class User(Base):
     failed_login_count: Mapped[int] = mapped_column(Integer, server_default=text("0"))
     first_failed_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Where the profile photo is stored (a file name in MEDIA_DIR or an S3 key), not a URL.
+    photo_key: Mapped[str | None] = mapped_column(Text)
 
 
 class RefreshToken(Base):
