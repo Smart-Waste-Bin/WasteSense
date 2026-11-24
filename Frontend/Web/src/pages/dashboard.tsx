@@ -1,9 +1,9 @@
 import { Map, Route } from "lucide-react";
-import { Button } from "../ui/button";
-import { MetricCard } from "./metric-card";
-import { CampusMap } from "./campus-map";
-import { ActiveCard } from "./active-card";
-import { StatusAlerts, type BinStatus, type StatusAlert } from "./status-alerts";
+import { Button } from "../components/ui/button";
+import { MetricCard } from "../components/dashboard/metric-card";
+import { CampusMap } from "../components/dashboard/campus-map";
+import { ActiveCard } from "../components/dashboard/active-card";
+import { StatusAlerts, type BinStatus, type StatusAlert } from "./../components/dashboard/status-alerts";
 
 const metrics = [
   {
