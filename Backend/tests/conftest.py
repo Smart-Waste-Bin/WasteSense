@@ -15,6 +15,7 @@ BACKEND_DIR = Path(__file__).resolve().parents[1]
 
 # The app's own MQTT client is not wanted in tests. test_ingest_mqtt.py starts one itself.
 settings.mqtt_ingest_enabled = False
+settings.status_job_enabled = False
 
 
 def alembic_config(database_url: str) -> Config:

@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     mqtt_sim_password: str = "change-me-sim"
     # The backend listens on MQTT while it runs. Tests turn this off (tests/conftest.py).
     mqtt_ingest_enabled: bool = True
+    # The every-60-s offline check (BE-03). Tests turn this off too.
+    status_job_enabled: bool = True
 
     jwt_secret: str = "change-me-to-a-long-random-string"
     access_token_minutes: int = 60
