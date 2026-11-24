@@ -1,5 +1,5 @@
 # ruff: noqa: F811  (pytest fixtures imported from test_auth are used as arguments)
-"""BE-04: bins, readings and overview API (ticket SB-11, contract v1.3 sections 5 and 6)."""
+"""BE-04: bins, readings and overview API (ticket SB-11, contract v1.4 sections 5 and 6)."""
 
 import time
 import uuid

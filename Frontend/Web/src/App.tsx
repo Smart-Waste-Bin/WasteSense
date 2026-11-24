@@ -1,11 +1,47 @@
+import { useEffect, useState, type CSSProperties } from "react"
+import { Dashboard } from "./components/dashboard/dashboard"
+import { Navbar } from "./components/dashboard/navbar"
+import { Sidebar } from "./components/dashboard/sidebar"
+import { Login } from "./components/auth/login"
+import { SidebarInset, SidebarProvider } from "./components/ui/sidebar"
+import { getCurrentUser, logout, type AuthUser } from "./auth"
+
 function App() {
+  const [user, setUser] = useState<AuthUser | null>(null)
+  const [isCheckingSession, setIsCheckingSession] = useState(true)
+  const [activePage, setActivePage] = useState("Dashboard")
+
+  useEffect(() => {
+    getCurrentUser()
+      .then(setUser)
+      .finally(() => setIsCheckingSession(false))
+  }, [])
+
+  if (isCheckingSession) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#f5f5f5]">
+        <p className="text-sm font-semibold text-slate-500">Opening your dashboard...</p>
+      </div>
+    )
+  }
+
+  if (!user) return <Login onLogin={setUser} />
+
+  const handleSignOut = async () => {
+    await logout()
+    setUser(null)
+  }
+
   return (
-    <div>
-      <h1 className="bg-red-500 text-white flex items-center justify-center h-16">
-        Welcome to the Waste Sense App
-      </h1>
-    </div>
-  );
+    <SidebarProvider className="bg-[#f7f9fa] text-slate-900" style={{ "--sidebar-width": "260px" } as CSSProperties}>
+      <Sidebar activePage={activePage} onNavigate={setActivePage} />
+      <SidebarInset className="min-h-screen min-w-0 bg-[#f7f9fa]">
+        <Navbar activePage={activePage} onSignOut={handleSignOut} user={user} />
+        <Dashboard />
+      </SidebarInset>
+    </SidebarProvider>
+    
+  )
 }
 
-export default App;
+export default App
