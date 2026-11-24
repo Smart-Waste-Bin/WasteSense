@@ -14,6 +14,7 @@ from app.api.bin_schemas import (
     BinsPage,
     BinUpdate,
     HourReadingOut,
+    Location,
     RawReadingOut,
     ReadingsPage,
     number,
@@ -55,7 +56,7 @@ def bin_out(the_bin: Bin, lat: float, lng: float) -> BinOut:
     return BinOut(
         id=the_bin.id,
         name=the_bin.name,
-        location={"lat": lat, "lng": lng},
+        location=Location(lat=lat, lng=lng),
         depth_cm=number(the_bin.depth_cm),
         volume_l=number(the_bin.volume_l),
         sensor_id=the_bin.sensor_id,
@@ -133,7 +134,7 @@ def list_bins(
     column = SORT_FIELDS[field]
     order = column.desc().nulls_last() if sort.startswith("-") else column.asc().nulls_last()
 
-    total = db.scalar(select(func.count()).select_from(query.subquery()))
+    total = db.scalar(select(func.count()).select_from(query.subquery())) or 0
     rows = db.execute(query.order_by(order, Bin.id).offset((page - 1) * size).limit(size)).all()
     return BinsPage(items=[bin_out(row.Bin, row.lat, row.lng) for row in rows], total=total)
 
@@ -269,8 +270,8 @@ def list_readings(
 
     if bucket == "raw":
         query = select(Reading).where(*in_range)
-        total = db.scalar(select(func.count()).select_from(query.subquery()))
-        rows = db.scalars(query.order_by(Reading.device_ts).offset(offset).limit(size)).all()
+        total = db.scalar(select(func.count()).select_from(query.subquery())) or 0
+        readings = db.scalars(query.order_by(Reading.device_ts).offset(offset).limit(size)).all()
         raw_items = [
             RawReadingOut(
                 seq=row.seq,
@@ -282,7 +283,7 @@ def list_readings(
                 received_at=row.received_at,
                 is_late=row.is_late,
             )
-            for row in rows
+            for row in readings
         ]
         return ReadingsPage(items=raw_items, total=total)
 
@@ -292,19 +293,19 @@ def list_readings(
             hour,
             func.avg(Reading.fill).label("avg_fill"),
             func.max(Reading.fill).label("max_fill"),
-            func.count().label("count"),
+            func.count().label("reading_count"),
         )
         .where(*in_range)
         .group_by(hour)
     )
-    total = db.scalar(select(func.count()).select_from(hours.subquery()))
+    total = db.scalar(select(func.count()).select_from(hours.subquery())) or 0
     rows = db.execute(hours.order_by(hour).offset(offset).limit(size)).all()
     hour_items = [
         HourReadingOut(
             ts=row.hour,
             avg_fill=round(float(row.avg_fill), 1),
             max_fill=number(row.max_fill),
-            count=row.count,
+            count=row.reading_count,
         )
         for row in rows
     ]
