@@ -5,8 +5,10 @@ import NotchedHeroCard from "./NotchedHeroCard";
 import Hero from "@/assets/loginPic.jpeg";
 import Logo from "@/assets/logo.jpg";
 import { login, type AuthUser } from "@/auth";
+import { ForgotPassword } from "./forgot-password";
 
 function Login({ onLogin }: { onLogin: (user: AuthUser) => void }) {
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
@@ -26,6 +28,10 @@ function Login({ onLogin }: { onLogin: (user: AuthUser) => void }) {
       setIsSubmitting(false);
     }
   };
+
+  if (showForgotPassword) {
+    return <ForgotPassword onBackToLogin={() => setShowForgotPassword(false)} />;
+  }
 
   return (
     <div className="min-h-screen -my-8 flex justify-center items-center bg-[#f5f5f5] p-6">
@@ -88,6 +94,7 @@ function Login({ onLogin }: { onLogin: (user: AuthUser) => void }) {
                 </label>
                 <button
                   type="button"
+                  onClick={() => setShowForgotPassword(true)}
                   className="font-semibold text-emerald-600 hover:text-emerald-700"
                 >
                   Forgot password?
