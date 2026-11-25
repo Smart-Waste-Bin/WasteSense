@@ -1,0 +1,15 @@
+{
+  "items": [
+    {
+      "seq": 1042,
+      "fill": 72,
+      "distance_cm": 28,
+      "battery": 95,
+      "rssi": -67,
+      "ts": "2026-11-07T08:30:00Z",
+      "received_at": "2026-11-07T08:30:01Z",
+      "is_late": false
+    }
+  ],
+  "total": 1
+}

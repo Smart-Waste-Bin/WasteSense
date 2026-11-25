@@ -7,10 +7,10 @@ to each other. If the code and this file disagree, this file wins and the code g
 
 | | |
 | --- | --- |
-| Version | 1.3 |
-| Date | 2026-11-21 |
+| Version | 1.4 |
+| Date | 2026-11-24 |
 | Status | Draft - awaiting approval |
-| Tickets | SET-03 (FR-04, FR-15), AUTH-01 (FR-24, FR-26, FR-27), BE-02 (FR-10, FR-11), AUTH-03 |
+| Tickets | SET-03 (FR-04, FR-15), AUTH-01 (FR-24, FR-26, FR-27), BE-02 (FR-10, FR-11), AUTH-03, BE-04 (FR-15, FR-33) |
 
 ### Approval
 
@@ -37,6 +37,7 @@ to each other. If the code and this file disagree, this file wins and the code g
 | 1.1 | AUTH-01 | Login takes `login` (email or phone) instead of `email`. Access tokens last 60 minutes, plus refresh tokens (`/api/auth/refresh`, `/api/auth/logout`). `user` has `phone`. New error codes for auth, and 423 for a locked account. Write rule for roles (section 6): bin create/delete and truck writes are now admin and supervisor. 1.0 was never approved and no code used its login, so the renamed field is 1.1, not 2.0. |
 | 1.2 | BE-02 | A duplicate reading is saved in `rejected_readings` with reason `duplicate`, so it can be counted. It is still not saved in `readings`. Nothing changes for devices. |
 | 1.3 | AUTH-03 | My profile: `PATCH /api/me` (name, phone), `POST /api/me/password` (change password, new error code `wrong_password`), `PUT` and `DELETE /api/me/photo` (profile photo). `GET /api/me` has `photo_url`. Password change moved out of `PATCH /api/me` into its own endpoint. No reset link (no email or domain yet). |
+| 1.4 | BE-04 | Locations are `{lat, lng}` instead of `{lat, lon}` (the BE-04 ticket says `lng`). New `GET /api/stats/overview`. `GET /api/bins/{id}/readings` takes `bucket=raw\|hour`, and its `size` goes up to 1000 so 30 days of hours fit in one page. `GET /api/bins` takes `q` (search in ID and name). The contract was never approved and no frontend code used `lon`, so the rename is 1.4, not 2.0. |
 
 ## 1. Naming and common rules
 
@@ -379,7 +380,7 @@ A late reading still updates the bin's history, but it does not change `last_fil
 - Base path `/api`. JSON in and out, UTF-8 (`Content-Type: application/json`).
 - Field names are `snake_case`, the same as the database columns.
 - Times in responses are UTC ISO 8601 with `Z`. The frontend converts them to local time (Ghana is UTC+0 anyway).
-- Locations are always `{"lat": 6.6989, "lon": -1.6191}`. Never raw PostGIS (WKB or WKT).
+- Locations are always `{"lat": 6.6989, "lng": -1.6191}`. Never raw PostGIS (WKB or WKT).
 - Numbers are JSON numbers, never strings (`"last_fill": 72`, not `"72"`).
 
 ### Auth
@@ -753,7 +754,8 @@ Every error has the same shape: `{"error": {"code": "...", "message": "..."}}`.
 
 ### Paging
 
-- `?page=1&size=20`. `page` starts at 1. `size` is 1 to 100, default 20.
+- `?page=1&size=20`. `page` starts at 1. `size` is 1 to 100, default 20. Only exception:
+  `GET /api/bins/{id}/readings` allows `size` up to 1000.
 - The response is `{"items": [...], "total": 123}`. `total` is the count of all matching rows, not just this page.
 
 `GET /api/bins?page=1&size=2&sort=-last_fill` (file `rest/bins-page.json`). There are 11 bins, this is the first page of 2:
@@ -766,7 +768,7 @@ Every error has the same shape: `{"error": {"code": "...", "message": "..."}}`.
       "name": "Kejetia Market",
       "location": {
         "lat": 6.698635,
-        "lon": -1.61914
+        "lng": -1.61914
       },
       "depth_cm": 100,
       "volume_l": 240,
@@ -786,7 +788,7 @@ Every error has the same shape: `{"error": {"code": "...", "message": "..."}}`.
       "name": "KNUST - SmartBin prototype",
       "location": {
         "lat": 6.672956,
-        "lon": -1.565147
+        "lng": -1.565147
       },
       "depth_cm": 100,
       "volume_l": 240,
@@ -845,12 +847,13 @@ A collector never writes bins, trucks, users or settings, and never plans a rout
 | me | `POST /api/me/password` | Change my password | A S C |
 | me | `PUT /api/me/photo` | Upload my profile photo | A S C |
 | me | `DELETE /api/me/photo` | Remove my profile photo | A S C |
-| bins | `GET /api/bins` | List bins (paged, filters, sort) | A S C |
+| bins | `GET /api/bins` | List bins, `?status=&q=&is_physical=&sort=` (paged) | A S C |
 | bins | `GET /api/bins/{id}` | One bin | A S C |
 | bins | `POST /api/bins` | Add a bin | A S |
 | bins | `PATCH /api/bins/{id}` | Edit a bin, set maintenance | A S |
 | bins | `DELETE /api/bins/{id}` | Delete a bin (soft delete, sets `deleted_at`) | A S |
-| readings | `GET /api/bins/{id}/readings` | Fill history, `?from=&to=` (paged) | A S |
+| readings | `GET /api/bins/{id}/readings` | Fill history, `?from=&to=&bucket=raw\|hour` (paged) | A S |
+| stats | `GET /api/stats/overview` | Numbers for the dashboard overview cards | A S |
 | alerts | `GET /api/alerts` | List alerts, `?state=&type=&bin_id=` (paged) | A S |
 | alerts | `POST /api/alerts/{id}/acknowledge` | Mark an alert as seen | A S |
 | alerts | `POST /api/alerts/{id}/resolve` | Close an alert | A S |
@@ -892,7 +895,7 @@ A collector never writes bins, trucks, users or settings, and never plans a rout
   "name": "KNUST - SmartBin prototype",
   "location": {
     "lat": 6.672956,
-    "lon": -1.565147
+    "lng": -1.565147
   },
   "depth_cm": 100,
   "volume_l": 240,
@@ -909,10 +912,100 @@ A collector never writes bins, trucks, users or settings, and never plans a rout
 }
 ```
 
-- `location` is the PostGIS point turned into `lat`/`lon`.
+- `location` is the PostGIS point turned into `lat`/`lng`.
 - `due_threshold` and `urgent_threshold` are `null` when the bin uses the value from `settings`.
 - `last_battery` is `null` for a bin on mains power or one that has never reported a battery level.
 - `deleted_at` is not sent. A deleted bin gives `404`.
+
+### `GET /api/bins`
+
+- Filters: `status` (one or more, `?status=due,urgent`), `is_physical`, and `q`, which searches
+  the bin ID and name (not case sensitive, part of a word is enough: `?q=kejetia`).
+- `sort`: `id` (default), `name`, `status`, `last_fill`, `last_battery`, `last_seen_at`, `created_at`.
+- Deleted bins are never listed.
+
+### `POST /api/bins`, `PATCH /api/bins/{id}`, `DELETE /api/bins/{id}`
+
+- `POST` body: `name`, `location`, `depth_cm`, `volume_l` (required); `id`, `sensor_id`,
+  `is_physical`, `due_threshold`, `urgent_threshold` (optional). Without `id` the next free
+  `BIN-NNN` is used. A new bin starts `offline` until its first reading. Response `201` with the bin.
+- `PATCH` changes only the fields sent. Send `null` for a threshold to go back to the setting.
+- `due_threshold` must be below `urgent_threshold` (`422 validation_error`).
+- A used bin ID or sensor ID gives `409 conflict`.
+- `DELETE` is a soft delete: it sets `deleted_at`, keeps the readings, and answers `204`.
+  After that the bin gives `404`. Its ID is never given to a new bin.
+- Collectors get `403 forbidden` on all three.
+
+### `GET /api/bins/{id}/readings`
+
+- `from` and `to` are times in UTC. Default `to` = now, default `from` = 24 h before `to`.
+  `from` is included, `to` is not.
+- `bucket=raw` (default): every stored reading, oldest first. File `rest/readings-raw.json`:
+
+```json
+{
+  "items": [
+    {
+      "seq": 1042,
+      "fill": 72,
+      "distance_cm": 28,
+      "battery": 95,
+      "rssi": -67,
+      "ts": "2026-11-07T08:30:00Z",
+      "received_at": "2026-11-07T08:30:01Z",
+      "is_late": false
+    }
+  ],
+  "total": 1
+}
+```
+
+- `bucket=hour`: one row per hour that has readings, oldest first. `avg_fill` (1 decimal) and
+  `max_fill` are worked out in SQL (`date_trunc('hour', ...)`). `ts` is the start of the hour.
+  File `rest/readings-hour.json`:
+
+```json
+{
+  "items": [
+    {
+      "ts": "2026-11-07T08:00:00Z",
+      "avg_fill": 70.5,
+      "max_fill": 72,
+      "count": 12
+    },
+    {
+      "ts": "2026-11-07T09:00:00Z",
+      "avg_fill": 74.0,
+      "max_fill": 76,
+      "count": 12
+    }
+  ],
+  "total": 2
+}
+```
+
+- `size` goes up to 1000, so 30 days of hours (720 rows) come in one page.
+
+### `GET /api/stats/overview`
+
+The numbers on the dashboard's overview cards. File `rest/stats-overview.json`:
+
+```json
+{
+  "total_bins": 11,
+  "needing_collection": 3,
+  "offline": 1,
+  "collections_today": 4,
+  "distance_saved_week_m": 12850
+}
+```
+
+- `total_bins`: bins that are not deleted.
+- `needing_collection`: bins with status `due` or `urgent`.
+- `offline`: bins with status `offline`.
+- `collections_today`: collections since 00:00 UTC today (Ghana is UTC+0).
+- `distance_saved_week_m`: for routes completed this week (from Monday 00:00 UTC), the sum of
+  `baseline_fixed_m - total_distance_m`, in metres. Routes without a baseline are left out. `0` when none.
 
 ### `GET /api/alerts`
 
@@ -1076,7 +1169,7 @@ No reply is needed. If a client gets nothing for 60 seconds, it reconnects.
     "collector_id": "3b8d1f4a-6c2e-4a97-b5d0-8e1f2a3c4d55",
     "location": {
       "lat": 6.6989,
-      "lon": -1.6191
+      "lng": -1.6191
     },
     "accuracy_m": 8,
     "recorded_at": "2026-11-07T09:05:30Z"
@@ -1161,8 +1254,11 @@ reading fails with the code above.
 | Paging (`GET /api/bins`) | `rest/bins-page.json` | yes |
 | Filters and sorting | `rest/bins-page.json`, `rest/alerts-page.json` | yes |
 | Times in UTC | every file (checked by the test) | yes |
-| Locations as lat/lon | `rest/bin.json` | yes |
+| Locations as lat/lng | `rest/bin.json` | yes |
 | `GET /api/bins/{id}` | `rest/bin.json` | yes |
+| `GET /api/bins/{id}/readings` (raw) | `rest/readings-raw.json` | yes |
+| `GET /api/bins/{id}/readings` (hour) | `rest/readings-hour.json` | yes |
+| `GET /api/stats/overview` | `rest/stats-overview.json` | yes |
 | `GET /api/alerts` | `rest/alerts-page.json` | yes |
 | WebSocket ping | `ws/ping.json` | yes |
 | WebSocket `bin_updated` | `ws/bin_updated.json` | yes |
