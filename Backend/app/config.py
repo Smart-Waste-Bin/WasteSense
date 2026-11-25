@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     mqtt_test_device_password: str = "change-me-device"
     mqtt_sim_user: str = "smartbin-simulator"
     mqtt_sim_password: str = "change-me-sim"
+    # The simulator adds missing bins through the API, logged in as the seeded supervisor
+    # (password: SEED_SUPERVISOR_PASSWORD).
+    sim_api_url: str = "http://localhost:8000"
+    sim_api_login: str = "supervisor@smartbin.test"
     # The backend listens on MQTT while it runs. Tests turn this off (tests/conftest.py).
     mqtt_ingest_enabled: bool = True
     # The every-60-s offline check (BE-03). Tests turn this off too.

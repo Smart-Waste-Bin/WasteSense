@@ -7,8 +7,8 @@ to each other. If the code and this file disagree, this file wins and the code g
 
 | | |
 | --- | --- |
-| Version | 1.4 |
-| Date | 2026-11-24 |
+| Version | 1.5 |
+| Date | 2026-11-25 |
 | Status | Draft - awaiting approval |
 | Tickets | SET-03 (FR-04, FR-15), AUTH-01 (FR-24, FR-26, FR-27), BE-02 (FR-10, FR-11), AUTH-03, BE-04 (FR-15, FR-33) |
 
@@ -38,6 +38,7 @@ to each other. If the code and this file disagree, this file wins and the code g
 | 1.2 | BE-02 | A duplicate reading is saved in `rejected_readings` with reason `duplicate`, so it can be counted. It is still not saved in `readings`. Nothing changes for devices. |
 | 1.3 | AUTH-03 | My profile: `PATCH /api/me` (name, phone), `POST /api/me/password` (change password, new error code `wrong_password`), `PUT` and `DELETE /api/me/photo` (profile photo). `GET /api/me` has `photo_url`. Password change moved out of `PATCH /api/me` into its own endpoint. No reset link (no email or domain yet). |
 | 1.4 | BE-04 | Locations are `{lat, lng}` instead of `{lat, lon}` (the BE-04 ticket says `lng`). New `GET /api/stats/overview`. `GET /api/bins/{id}/readings` takes `bucket=raw\|hour`, and its `size` goes up to 1000 so 30 days of hours fit in one page. `GET /api/bins` takes `q` (search in ID and name). The contract was never approved and no frontend code used `lon`, so the rename is 1.4, not 2.0. |
+| 1.5 | BE-06 | Real-time monitoring: the device measures about every second and sends a reading when `fill` changes by 2 or more, plus a heartbeat reading if nothing was sent for `reporting_interval_s` (section 3). Message format unchanged, so nothing changes for the backend or the frontend. |
 
 ## 1. Naming and common rules
 
@@ -201,8 +202,31 @@ Rules for the device:
   It may log the problem locally (serial output). It does not send a fake value.
 - **No real time yet (NTP not synced after boot): the device does not send a reading.**
   A wrong `ts` would be rejected as `bad_timestamp`.
-- The device reports every `reporting_interval_s` seconds (default 300, from `settings`).
 - Extra fields are ignored by the backend. New fields need a contract change.
+
+#### When the device sends a reading (real-time monitoring, v1.5)
+
+The dashboard must show a change in the bin within a few seconds, so the device sends on
+change, not on a timer:
+
+| Rule | Value | Why |
+| --- | --- | --- |
+| Measure | about every **1 s** | Catch rubbish going in straight away |
+| Smooth | median of 5 quick pings per measurement | One bad echo must not count as a change |
+| Send on change | when the rounded `fill` differs from the last **sent** `fill` by **2 or more** | 2 points is above the sensor noise (about +-1.5 cm on a 100 cm bin) |
+| Not faster than | 1 reading per second | Protects the broker and the database |
+| Heartbeat | a normal reading if nothing was sent for `reporting_interval_s` (default 300 s) | Shows the bin is alive; `last_seen_at` stays fresh |
+
+- The heartbeat is an ordinary reading (same topic and fields, next `seq`). There is no separate
+  heartbeat message. A bin that sends nothing for `offline_timeout_min` (default 15 minutes,
+  3 missed heartbeats) shows Offline, and the broker's last will marks it Offline at once if
+  the connection drops.
+- Every sent reading takes the next `seq`, so duplicates and gaps are still spotted (section 4).
+- The path to the screen is unchanged: device -> MQTT -> backend -> database and WebSocket
+  `bin_updated` -> dashboard. The backend sends `bin_updated` for every stored reading, so a
+  change shows on the dashboard within about 2 s of the reading being sent.
+- `reporting_interval_s` now means "longest gap between readings" (the heartbeat). It is still
+  used for the late rule (section 4) and for expected readings in data quality (BE-07).
 
 ## 4. Validation rules and reject reasons
 
