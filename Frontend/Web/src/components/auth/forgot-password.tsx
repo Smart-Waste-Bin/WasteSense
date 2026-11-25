@@ -1,4 +1,4 @@
-import { ArrowLeft, KeyRound } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Button } from "../ui/button";
 import Logo from "@/assets/logo.jpg";
 
