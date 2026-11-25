@@ -109,7 +109,7 @@ docker compose exec backend python -m simulator.run --speed 60 --scenario simula
 - `--speed 60`: one simulated hour per real minute, so each bin sends every 5 s and visibly fills.
 - `demo.yaml` starts the bins at a spread of levels (Normal, Filling, Due and Urgent all on the
   map at once) at a weekday lunchtime, and BIN-011 drops offline for a minute after 3 minutes.
-- The real bin sends on change (contract section 3, v1.4), so rubbish put in shows on the
+- The real bin sends on change (contract section 3, v1.5), so rubbish put in shows on the
   dashboard within a few seconds.
 - Afterwards: Ctrl+C, then `docker compose start simulator` for the normal real-time one.
 

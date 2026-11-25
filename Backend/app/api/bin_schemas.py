@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from decimal import Decimal
+from typing import Any, overload
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer
 
@@ -10,6 +11,10 @@ from app.api.schemas import utc_z
 Number = int | float
 
 
+@overload
+def number(value: Decimal) -> Number: ...
+@overload
+def number(value: Decimal | None) -> Number | None: ...
 def number(value: Decimal | None) -> Number | None:
     """Contract rule: numbers are JSON numbers. 100 stays 100, 28.4 stays 28.4."""
     if value is None:
@@ -22,28 +27,27 @@ class Location(BaseModel):
     lng: float = Field(ge=-180, le=180)
 
 
+BIN_EXAMPLE: dict[str, Any] = {
+    "id": "BIN-001",
+    "name": "KNUST - SmartBin prototype",
+    "location": {"lat": 6.672956, "lng": -1.565147},
+    "depth_cm": 100,
+    "volume_l": 240,
+    "sensor_id": None,
+    "status": "due",
+    "maintenance": False,
+    "is_physical": True,
+    "due_threshold": None,
+    "urgent_threshold": None,
+    "last_fill": 72,
+    "last_battery": 95,
+    "last_seen_at": "2026-11-07T08:30:00Z",
+    "created_at": "2026-11-01T10:00:00Z",
+}
+
+
 class BinOut(BaseModel):
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": {
-                "id": "BIN-001",
-                "name": "KNUST - SmartBin prototype",
-                "location": {"lat": 6.672956, "lng": -1.565147},
-                "depth_cm": 100,
-                "volume_l": 240,
-                "sensor_id": None,
-                "status": "due",
-                "maintenance": False,
-                "is_physical": True,
-                "due_threshold": None,
-                "urgent_threshold": None,
-                "last_fill": 72,
-                "last_battery": 95,
-                "last_seen_at": "2026-11-07T08:30:00Z",
-                "created_at": "2026-11-01T10:00:00Z",
-            }
-        }
-    )
+    model_config = ConfigDict(json_schema_extra={"example": BIN_EXAMPLE})
 
     id: str
     name: str
@@ -70,7 +74,7 @@ class BinsPage(BaseModel):
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
-                "items": [BinOut.model_config["json_schema_extra"]["example"]],
+                "items": [BIN_EXAMPLE],
                 "total": 11,
             }
         }

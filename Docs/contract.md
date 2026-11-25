@@ -7,10 +7,10 @@ to each other. If the code and this file disagree, this file wins and the code g
 
 | | |
 | --- | --- |
-| Version | 1.4 |
-| Date | 2026-11-18 |
+| Version | 1.5 |
+| Date | 2026-11-25 |
 | Status | Draft - awaiting approval |
-| Tickets | SET-03 (FR-04, FR-15), AUTH-01 (FR-24, FR-26, FR-27), BE-02 (FR-10, FR-11), BE-04 (FR-15, FR-33) |
+| Tickets | SET-03 (FR-04, FR-15), AUTH-01 (FR-24, FR-26, FR-27), BE-02 (FR-10, FR-11), AUTH-03, BE-04 (FR-15, FR-33) |
 
 ### Approval
 
@@ -36,8 +36,9 @@ to each other. If the code and this file disagree, this file wins and the code g
 | 1.0 | SET-03 | First version. |
 | 1.1 | AUTH-01 | Login takes `login` (email or phone) instead of `email`. Access tokens last 60 minutes, plus refresh tokens (`/api/auth/refresh`, `/api/auth/logout`). `user` has `phone`. New error codes for auth, and 423 for a locked account. Write rule for roles (section 6): bin create/delete and truck writes are now admin and supervisor. 1.0 was never approved and no code used its login, so the renamed field is 1.1, not 2.0. |
 | 1.2 | BE-02 | A duplicate reading is saved in `rejected_readings` with reason `duplicate`, so it can be counted. It is still not saved in `readings`. Nothing changes for devices. |
-| 1.3 | BE-04 | Locations are `{lat, lng}` instead of `{lat, lon}` (the BE-04 ticket says `lng`). New `GET /api/stats/overview`. `GET /api/bins/{id}/readings` takes `bucket=raw\|hour`, and its `size` goes up to 1000 so 30 days of hours fit in one page. `GET /api/bins` takes `q` (search in ID and name). The contract was never approved and no frontend code used `lon`, so the rename is 1.3, not 2.0. |
-| 1.4 | BE-06 | Real-time monitoring: the device measures about every second and sends a reading when `fill` changes by 2 or more, plus a heartbeat reading if nothing was sent for `reporting_interval_s` (section 3). Message format unchanged, so nothing changes for the backend or the frontend. |
+| 1.3 | AUTH-03 | My profile: `PATCH /api/me` (name, phone), `POST /api/me/password` (change password, new error code `wrong_password`), `PUT` and `DELETE /api/me/photo` (profile photo). `GET /api/me` has `photo_url`. Password change moved out of `PATCH /api/me` into its own endpoint. No reset link (no email or domain yet). |
+| 1.4 | BE-04 | Locations are `{lat, lng}` instead of `{lat, lon}` (the BE-04 ticket says `lng`). New `GET /api/stats/overview`. `GET /api/bins/{id}/readings` takes `bucket=raw\|hour`, and its `size` goes up to 1000 so 30 days of hours fit in one page. `GET /api/bins` takes `q` (search in ID and name). The contract was never approved and no frontend code used `lon`, so the rename is 1.4, not 2.0. |
+| 1.5 | BE-06 | Real-time monitoring: the device measures about every second and sends a reading when `fill` changes by 2 or more, plus a heartbeat reading if nothing was sent for `reporting_interval_s` (section 3). Message format unchanged, so nothing changes for the backend or the frontend. |
 
 ## 1. Naming and common rules
 
@@ -203,7 +204,7 @@ Rules for the device:
   A wrong `ts` would be rejected as `bad_timestamp`.
 - Extra fields are ignored by the backend. New fields need a contract change.
 
-#### When the device sends a reading (real-time monitoring, v1.4)
+#### When the device sends a reading (real-time monitoring, v1.5)
 
 The dashboard must show a change in the bin within a few seconds, so the device sends on
 change, not on a timer:
@@ -544,9 +545,14 @@ The logged-in user. Response `200` (file `rest/me-response.json`):
   "phone": "+233241234567",
   "role": "supervisor",
   "is_active": true,
-  "created_at": "2026-11-01T10:00:00Z"
+  "created_at": "2026-11-01T10:00:00Z",
+  "photo_url": "/media/profile-photos/9a2c4e6f-1b3d-4f58-a7c9-0e2b4d6f8a10-Xk3v9QmT2pI.jpg"
 }
 ```
+
+`photo_url` is `null` when there is no photo. With local storage it is a path on the API
+(`/media/...`): put the API base URL in front of it. With S3 it is a full link that works
+for 1 hour, so get `/api/me` again when the page is opened later.
 
 | Case | Status | Code |
 | --- | --- | --- |
@@ -554,6 +560,68 @@ The logged-in user. Response `200` (file `rest/me-response.json`):
 | Bad token, or a refresh token sent as the bearer token | 401 | `invalid_token` |
 | Access token expired | 401 | `token_expired` |
 | Account deactivated after the token was issued | 403 | `account_disabled` |
+
+These errors also apply to every `/api/me` endpoint below.
+
+#### `PATCH /api/me`
+
+Change my name and phone. Send only the fields that change. `phone` is written like at login
+and stored as `+233...`; `null` or `""` removes it. Email and role can't be changed here
+(an admin does that). Response `200`: the user, like `GET /api/me`.
+The top bar can use this response straight away.
+
+Request (file `rest/me-update-request.json`):
+
+```json
+{
+  "name": "Ama Mensah",
+  "phone": "024 555 1234"
+}
+```
+
+| Case | Status | Code |
+| --- | --- | --- |
+| Empty name, name over 100 characters, or not a Ghana phone number | 422 | `validation_error` |
+| Another user already has this phone | 409 | `conflict` |
+
+#### `POST /api/me/password`
+
+Change my password. Request (file `rest/me-password-request.json`):
+
+```json
+{
+  "current_password": "change-me-supervisor",
+  "new_password": "a-new-password-456",
+  "confirm_password": "a-new-password-456"
+}
+```
+
+Response `200`: new tokens, the same shape as login, and the cookie is set again.
+Every other device of this user is logged out (its refresh token stops working);
+this device carries on with the new tokens.
+
+| Case | Status | Code |
+| --- | --- | --- |
+| `current_password` is wrong | 400 | `wrong_password` |
+| 5 wrong passwords within 10 minutes (counted together with failed logins) | 423 | `account_locked` |
+| `new_password` under 8 characters, or `confirm_password` different | 422 | `validation_error` |
+
+There is no reset link for a forgotten password yet (no email or domain). An admin can set
+a new one with the CLI (`python -m app.cli set-password`).
+
+#### `PUT /api/me/photo`, `DELETE /api/me/photo`
+
+`PUT` uploads my profile photo as `multipart/form-data` with one file field, `photo`.
+JPEG, PNG or WebP, at most 2 MB. It replaces the old photo. `DELETE` removes it.
+Both answer `200` with the user, like `GET /api/me`.
+
+Where photos are kept is a setting: `STORAGE_BACKEND=local` (folder `Backend/media`,
+served at `/media`) or `STORAGE_BACKEND=s3` (an AWS S3 bucket, `S3_BUCKET`; the bucket can
+stay private because the links are presigned).
+
+| Case | Status | Code |
+| --- | --- | --- |
+| No file, not a JPEG/PNG/WebP image, or bigger than 2 MB | 422 | `validation_error` |
 
 ### Errors
 
@@ -571,6 +639,7 @@ Every error has the same shape: `{"error": {"code": "...", "message": "..."}}`.
 | `forbidden` | 403 | Logged in, but this role may not do this | `rest/error-forbidden.json` |
 | `account_disabled` | 403 | The account has been deactivated | `rest/error-account_disabled.json` |
 | `account_locked` | 423 | Too many failed logins. The message says when to try again. | `rest/error-account_locked.json` |
+| `wrong_password` | 400 | Password change: the current password is wrong | `rest/error-wrong_password.json` |
 | `not_found` | 404 | The thing doesn't exist, or is deleted | `rest/error-not_found.json` |
 | `conflict` | 409 | Clashes with existing data (duplicate email, route already started) | `rest/error-conflict.json` |
 | `internal_error` | 500 | Bug or server problem | `rest/error-internal_error.json` |
@@ -785,7 +854,7 @@ Every write route (POST, PUT, PATCH, DELETE) follows this rule. The backend help
 | Bins, trucks, planning or cancelling a route, alerts | admin, supervisor | `require_role("admin", "supervisor")` |
 | Users and settings | admin | `require_role("admin")` |
 | A collector's own route actions: start, complete, stop updates, GPS, collections | the route's collector (admin and supervisor may too) | `get_current_user`, then `ensure_own_route_or_staff(user, route)` |
-| My own account (`/api/me`, logout) | anyone logged in | `get_current_user` |
+| My own account (`/api/me`, `/api/me/password`, `/api/me/photo`, logout) | anyone logged in | `get_current_user` |
 
 A collector never writes bins, trucks, users or settings, and never plans a route: those give
 `403 forbidden`. A collector only sees and changes their own routes.
@@ -798,7 +867,10 @@ A collector never writes bins, trucks, users or settings, and never plans a rout
 | auth | `POST /api/auth/refresh` | New tokens from a refresh token | anyone with a refresh token |
 | auth | `POST /api/auth/logout` | End this session, or every session (`all_devices`) | A S C |
 | me | `GET /api/me` | My own user | A S C |
-| me | `PATCH /api/me` | Change my name, phone or password | A S C |
+| me | `PATCH /api/me` | Change my name or phone | A S C |
+| me | `POST /api/me/password` | Change my password | A S C |
+| me | `PUT /api/me/photo` | Upload my profile photo | A S C |
+| me | `DELETE /api/me/photo` | Remove my profile photo | A S C |
 | bins | `GET /api/bins` | List bins, `?status=&q=&is_physical=&sort=` (paged) | A S C |
 | bins | `GET /api/bins/{id}` | One bin | A S C |
 | bins | `POST /api/bins` | Add a bin | A S |
@@ -1188,6 +1260,9 @@ reading fails with the code above.
 | Logout request (this device) | `rest/logout-request.json` | yes |
 | Logout request (all devices) | `rest/logout-all-request.json` | yes |
 | `GET /api/me` | `rest/me-response.json` | yes |
+| `PATCH /api/me` request | `rest/me-update-request.json` | yes |
+| `POST /api/me/password` request | `rest/me-password-request.json` | yes |
+| Error `wrong_password` | `rest/error-wrong_password.json` | yes |
 | Error `validation_error` | `rest/error-validation_error.json` | yes |
 | Error `unauthorized` | `rest/error-unauthorized.json` | yes |
 | Error `invalid_credentials` | `rest/error-invalid_credentials.json` | yes |

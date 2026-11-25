@@ -5,3 +5,4 @@ __pycache__/
 .env
 Infra/mosquitto/certs/
 Infra/mosquitto/passwd
+media/
