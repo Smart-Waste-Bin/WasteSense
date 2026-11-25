@@ -3,9 +3,9 @@
 The WasteSense web app is the browser-based interface for the Smart Waste Bin 
 project. It is built with React, TypeScript, Vite, and Tailwind CSS.
 
-The current frontend is an initial shell that renders the WasteSense welcome
-view. Backend and bin-monitoring integrations will be added as the dashboard
-features are implemented.
+The web frontend includes the login page and connects it to the WasteSense
+authentication service. It also opens the dashboard only after the server
+confirms who the user is.
 
 ## Requirements
 
@@ -24,6 +24,17 @@ npm run dev
 
 Vite prints the local development URL in the terminal, usually
 `http://localhost:5173`.
+
+In another terminal, make sure the backend is running at
+`http://localhost:8000`. The web app uses that address by default. To use a
+different address, create `Frontend/Web/.env.local` and add:
+
+```text
+VITE_API_URL=http://localhost:8000
+```
+
+For the account setup and a plain-language explanation of sign-in, see
+[Login authentication guide](./LOGIN_AUTH_GUIDE.md).
 
 ## Available scripts
 

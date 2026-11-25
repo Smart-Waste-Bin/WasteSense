@@ -7,5 +7,8 @@ paho-mqtt>=2
 pydantic-settings
 ortools
 alembic
+apscheduler>=3.10,<4
 pwdlib[argon2]
 pyjwt
+python-multipart
+boto3
