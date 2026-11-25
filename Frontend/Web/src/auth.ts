@@ -4,6 +4,7 @@ export type AuthUser = {
   email: string
   phone: string | null
   role: string
+  photo_url?: string | null
 }
 
 type LoginResponse = {
@@ -57,13 +58,14 @@ async function readApiError(response: Response) {
 }
 
 async function apiRequest(path: string, init: RequestInit = {}) {
+  const headers = new Headers(init.headers)
+  if (!(init.body instanceof FormData) && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json")
+  }
   const response = await fetch(`${API_URL}${path}`, {
     ...init,
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...init.headers,
-    },
+    headers,
   })
   if (!response.ok) throw new Error(await readApiError(response))
   return response
@@ -107,6 +109,62 @@ export async function getCurrentUser() {
       return null
     }
   }
+}
+
+export async function updateCurrentUser(profile: Pick<AuthUser, "name" | "phone">) {
+  const accessToken = getAccessToken()
+  if (!accessToken) throw new Error("Your session has expired. Please sign in again.")
+  const response = await apiRequest("/api/me", {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify(profile),
+  })
+  return (await response.json()) as AuthUser
+}
+
+export async function changeCurrentUserPassword(passwords: {
+  current_password: string
+  new_password: string
+  confirm_password: string
+}) {
+  const accessToken = getAccessToken()
+  if (!accessToken) throw new Error("Your session has expired. Please sign in again.")
+  const response = await apiRequest("/api/me/password", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify(passwords),
+  })
+  const data = (await response.json()) as LoginResponse
+  const rememberMe = localStorage.getItem(REFRESH_TOKEN_KEY) !== null
+  storeTokens(data.access_token, data.refresh_token, rememberMe)
+  return data.user
+}
+
+export async function uploadCurrentUserPhoto(photo: File) {
+  const accessToken = getAccessToken()
+  if (!accessToken) throw new Error("Your session has expired. Please sign in again.")
+  const formData = new FormData()
+  formData.append("photo", photo)
+  const response = await apiRequest("/api/me/photo", {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body: formData,
+  })
+  return (await response.json()) as AuthUser
+}
+
+export async function removeCurrentUserPhoto() {
+  const accessToken = getAccessToken()
+  if (!accessToken) throw new Error("Your session has expired. Please sign in again.")
+  const response = await apiRequest("/api/me/photo", {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+  return (await response.json()) as AuthUser
+}
+
+export function getPhotoUrl(photoUrl: string | null | undefined) {
+  return photoUrl ? new URL(photoUrl, `${API_URL}/`).toString() : null
 }
 
 export async function logout() {

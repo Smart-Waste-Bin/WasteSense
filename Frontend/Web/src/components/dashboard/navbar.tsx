@@ -1,14 +1,20 @@
 import * as React from "react";
-import { Bell, ChevronDown } from "lucide-react";
+import { Bell } from "lucide-react";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
 import { SidebarTrigger } from "../ui/sidebar";
 import { SearchBar, type SearchSuggestion } from "../ui/search-bar";
 import type { AuthUser } from "@/auth";
+import { ProfileMenu } from "./profile-menu";
 
-type NavbarProps = { activePage: string; onSignOut: () => void; user: AuthUser };
+type NavbarProps = {
+  activePage: string;
+  onNavigate: (page: string) => void;
+  onSignOut: () => void;
+  user: AuthUser;
+};
 
-function Navbar({ activePage, onSignOut, user }: NavbarProps) {
+function Navbar({ activePage, onNavigate, onSignOut, user }: NavbarProps) {
   const [searchQuery, setSearchQuery] = React.useState("");
   const searchSuggestions: SearchSuggestion[] = [
     { id: "1", label: "Library entrance", description: "Bin" },
@@ -44,20 +50,11 @@ function Navbar({ activePage, onSignOut, user }: NavbarProps) {
           <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-emerald-500 ring-2 ring-white" />
         </Button>
         <div className="hidden h-8 w-px bg-slate-200 sm:block" />
-        <Button
-          variant="ghost"
-          onClick={onSignOut}
-          className="h-auto gap-2 p-0 hover:bg-transparent sm:gap-3"
-        >
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-700">
-            {user.name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()}
-          </span>
-          <span className="hidden text-left sm:block">
-            <span className="block text-sm font-bold">{user.name}</span>
-            <span className="block text-xs capitalize text-slate-400">{user.role}</span>
-          </span>
-          <ChevronDown size={16} className="text-slate-400" />
-        </Button>
+        <ProfileMenu
+          user={user}
+          onNavigate={onNavigate}
+          onSignOut={onSignOut}
+        />
       </div>
     </header>
   );

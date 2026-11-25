@@ -143,12 +143,12 @@ function Sidebar({ activePage, onNavigate }: SidebarProps) {
                   <span>Help center</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton className="h-auto rounded-xl px-3 py-3 text-sm font-semibold text-slate-500">
-                  <Settings size={19} />
-                  <span>Settings</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              <NavigationItem
+                label="Settings"
+                icon={Settings}
+                activePage={activePage}
+                onNavigate={onNavigate}
+              />
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
