@@ -5,7 +5,7 @@
       "name": "Kejetia Market",
       "location": {
         "lat": 6.698635,
-        "lon": -1.61914
+        "lng": -1.61914
       },
       "depth_cm": 100,
       "volume_l": 240,
@@ -25,7 +25,7 @@
       "name": "KNUST - SmartBin prototype",
       "location": {
         "lat": 6.672956,
-        "lon": -1.565147
+        "lng": -1.565147
       },
       "depth_cm": 100,
       "volume_l": 240,
