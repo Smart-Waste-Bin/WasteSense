@@ -1,0 +1,26 @@
+# Demo day (BE-06). Run with:
+#   docker compose stop simulator
+#   docker compose exec backend python -m simulator.run --speed 60 --scenario simulator/scenarios/demo.yaml
+# --speed 60 = one simulated hour per real minute: each bin sends every 5 s and visibly fills.
+# The bins start at a spread of levels so every status is on the map at once
+# (Normal under 50, Filling 50-69, Due 70-89, Urgent 90+).
+fixed_seed: 2026
+interval_s: 300
+# A weekday lunchtime, so the busy-hour rates apply and the bins move faster.
+start: 2026-11-16T12:00:00Z
+start_fill:
+  BIN-002: 88   # Kejetia Market: Due, Urgent within a few minutes
+  BIN-003: 93   # Urgent
+  BIN-004: 74   # Due
+  BIN-005: 62   # Filling
+  BIN-006: 35   # Normal
+  BIN-007: 81   # Due
+  BIN-008: 12   # Normal, just emptied
+  BIN-009: 55   # Filling
+  BIN-010: 67   # Filling, Due soon
+  BIN-011: 25   # Normal
+profiles: {}
+# Show offline detection: BIN-011 drops off 3 real minutes in, for 1 real minute.
+outages:
+  - {bin: BIN-011, start: 180, minutes: 60}
+faulty: []

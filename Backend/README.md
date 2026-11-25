@@ -6,7 +6,7 @@ Python side of SmartBin.
 | --- | --- |
 | `app/` | FastAPI server. Receives bin readings over MQTT, stores them in PostgreSQL/PostGIS and serves them to the web and mobile apps. |
 | `routing/` | Plans collection routes. `solve_route()` will use OSRM for road distances and OR-Tools for the visit order. Stub for now. |
-| `simulator/` | Sends fake bin fill levels over MQTT so we can test without hardware. Only prints the messages for now. |
+| `simulator/` | Virtual bins that send contract readings over MQTT, with outage and faulty-sensor scenarios. See `Docs/simulator.md`. |
 
 ## Setup
 
@@ -76,11 +76,16 @@ from the seed (`python -m scripts.seed`, passwords from `SEED_*_PASSWORD` in `.e
 
 ## Run the simulator
 
+`docker compose up` starts it (service `simulator`, real time). For a fast run, stop that one
+first so two simulators don't send for the same bins:
+
 ```bash
-python simulator/simulate.py
+docker compose stop simulator
+docker compose exec backend python -m simulator.run --speed 144 --hours 24
 ```
 
-Stop it with Ctrl+C.
+`--speed 144` runs 24 simulated hours in 10 minutes. Leave out `--hours` to run until Ctrl+C.
+Options, fill profiles and scenarios (outages, faulty sensors, fixed seed): `Docs/simulator.md`.
 
 ## Tests and lint
 
