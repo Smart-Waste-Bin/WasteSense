@@ -1,3 +1,5 @@
+import { config } from "./lib/config"
+
 export type AuthUser = {
   id: string
   name: string
@@ -22,7 +24,7 @@ type ErrorResponse = {
   }
 }
 
-const API_URL = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") || "http://localhost:8000"
+const API_URL = config.apiUrl
 const ACCESS_TOKEN_KEY = "wastesense.access_token"
 const REFRESH_TOKEN_KEY = "wastesense.refresh_token"
 
@@ -48,7 +50,7 @@ export function getAccessToken() {
   return readStoredToken(ACCESS_TOKEN_KEY)
 }
 
-async function readApiError(response: Response) {
+export async function readApiError(response: Response) {
   try {
     const data = (await response.json()) as ErrorResponse
     return data.error?.message || "The request could not be completed."

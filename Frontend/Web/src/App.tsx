@@ -3,6 +3,7 @@ import { Dashboard } from "./pages/dashboard";
 import { Navbar } from "./components/dashboard/navbar";
 import { Sidebar } from "./components/dashboard/sidebar";
 import { Settings } from "./pages/settings";
+import { LiveMap } from "./pages/live-map";
 import { Login } from "./components/auth/login";
 import { SidebarInset, SidebarProvider } from "./components/ui/sidebar";
 import { getCurrentUser, logout, type AuthUser } from "./auth";
@@ -71,7 +72,7 @@ function App() {
         />
         <Routes>
           <Route path="/" element={<Dashboard />} />
-          <Route path="/live-map" element={<Dashboard />} />
+          <Route path="/live-map" element={<LiveMap />} />
           <Route path="/bins" element={<Dashboard />} />
           <Route path="/alerts" element={<Dashboard />} />
           <Route path="/routes" element={<Dashboard />} />
