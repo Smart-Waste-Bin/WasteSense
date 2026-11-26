@@ -4,6 +4,9 @@ import { MetricCard } from "../components/dashboard/metric-card";
 import { CampusMap } from "../components/dashboard/campus-map";
 import { ActiveCard } from "../components/dashboard/active-card";
 import { StatusAlerts, type BinStatus, type StatusAlert } from "./../components/dashboard/status-alerts";
+import { useLiveBins } from "../hooks/use-live-bins";
+import type { Bin } from "../lib/bins";
+import { STATUS_THEME } from "../lib/theme";
 
 const metrics = [
   {
@@ -38,38 +41,18 @@ const metrics = [
   },
 ];
 
-const statusBins: BinStatus[] = [
-  {
-    id: 1,
-    label: "Urgent",
-    count: 2,
-    color: "#ef4444",
-  },
-  {
-    id: 2,
-    label: "Due",
-    count: 3,
-    color: "#df5b2c",
-  },
-  {
-    id: 3,
-    label: "Filling",
-    count: 1,
-    color: "#f5a623",
-  },
-  {
-    id: 4,
-    label: "Normal",
-    count: 3,
-    color: "#5b9f1f",
-  },
-  {
-    id: 5,
-    label: "Offline",
-    count: 1,
-    color: "#8b8b85",
-  },
-];
+// Most urgent first. Labels and colours come from lib/theme.ts, the same as the live map.
+const STATUS_ORDER = ["urgent", "due", "filling", "normal", "offline", "maintenance"] as const;
+
+// Counts the bins in each status. Bins come from GET /api/bins and stay live over the WebSocket.
+function countByStatus(bins: Bin[]): BinStatus[] {
+  return STATUS_ORDER.map((status, index) => ({
+    id: index + 1,
+    label: STATUS_THEME[status].label,
+    count: bins.filter((bin) => bin.status === status).length,
+    color: STATUS_THEME[status].color,
+  }));
+}
 
 const statusAlerts: StatusAlert[] = [
   {
@@ -93,6 +76,9 @@ const statusAlerts: StatusAlert[] = [
 ];
 
 function Dashboard() {
+  const { data: bins = [] } = useLiveBins();
+  const statusBins = countByStatus(bins);
+
   return (
     <main className="mx-auto w-full max-w-[1440px] min-w-0 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
       <div className="mb-8 flex flex-col items-start justify-between gap-5 sm:flex-row sm:items-end">
