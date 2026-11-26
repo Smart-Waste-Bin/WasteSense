@@ -25,10 +25,16 @@ class Settings(BaseSettings):
     mqtt_test_device_password: str = "change-me-device"
     mqtt_sim_user: str = "smartbin-simulator"
     mqtt_sim_password: str = "change-me-sim"
+    # The simulator adds missing bins through the API, logged in as the seeded supervisor
+    # (password: SEED_SUPERVISOR_PASSWORD).
+    sim_api_url: str = "http://localhost:8000"
+    sim_api_login: str = "supervisor@smartbin.test"
     # The backend listens on MQTT while it runs. Tests turn this off (tests/conftest.py).
     mqtt_ingest_enabled: bool = True
     # The every-60-s offline check (BE-03). Tests turn this off too.
     status_job_enabled: bool = True
+    # WebSocket heartbeat (BE-05, contract section 7). Tests make it shorter.
+    ws_ping_interval_s: float = 25
 
     jwt_secret: str = "change-me-to-a-long-random-string"
     access_token_minutes: int = 60

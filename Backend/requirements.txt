@@ -10,6 +10,7 @@ alembic
 apscheduler>=3.10,<4
 pwdlib[argon2]
 pyjwt
+pyyaml
 python-multipart
 boto3
 apscheduler
