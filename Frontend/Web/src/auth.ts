@@ -9,6 +9,72 @@ export type AuthUser = {
   photo_url?: string | null
 }
 
+export type OverviewStats = {
+  total_bins: number
+  needing_collection: number
+  offline: number
+  collections_today: number
+  distance_saved_week_m: number
+}
+
+export type BinRecord = {
+  id: string
+  name: string
+  location: { lat: number; lng: number }
+  depth_cm: number
+  volume_l: number
+  sensor_id: string | null
+  status: string
+  maintenance: boolean
+  is_physical: boolean
+  due_threshold: number | null
+  urgent_threshold: number | null
+  last_fill: number | null
+  last_battery: number | null
+  last_seen_at: string | null
+  created_at: string
+}
+
+export type BinsResponse = {
+  items: BinRecord[]
+  total: number
+}
+
+export type BinsQuery = {
+  q?: string
+  status?: string
+  sort?: string
+  page?: number
+  size?: number
+}
+
+export type BinCreateInput = {
+  id?: string
+  name: string
+  location: BinRecord["location"]
+  depth_cm: number
+  volume_l: number
+  sensor_id?: string | null
+  is_physical?: boolean
+  due_threshold?: number | null
+  urgent_threshold?: number | null
+}
+
+export type BinUpdateInput = Partial<
+  Pick<
+    BinRecord,
+    | "name"
+    | "location"
+    | "depth_cm"
+    | "volume_l"
+    | "sensor_id"
+    | "maintenance"
+    | "is_physical"
+    | "due_threshold"
+    | "urgent_threshold"
+  >
+>
+
 type LoginResponse = {
   access_token: string
   token_type: string
@@ -71,6 +137,57 @@ async function apiRequest(path: string, init: RequestInit = {}) {
   })
   if (!response.ok) throw new Error(await readApiError(response))
   return response
+}
+
+async function authenticatedApiRequest(path: string, init: RequestInit = {}) {
+  const accessToken = getAccessToken()
+  if (!accessToken) throw new Error("Your session has expired. Please sign in again.")
+  const headers = new Headers(init.headers)
+  headers.set("Authorization", `Bearer ${accessToken}`)
+  return apiRequest(path, { ...init, headers })
+}
+
+export async function getOverviewStats() {
+  const response = await authenticatedApiRequest("/api/stats/overview")
+  return (await response.json()) as OverviewStats
+}
+
+export async function getBins(query: BinsQuery = {}) {
+  const params = new URLSearchParams()
+  if (query.q?.trim()) params.set("q", query.q.trim())
+  if (query.status) params.set("status", query.status)
+  params.set("sort", query.sort ?? "id")
+  params.set("page", String(query.page ?? 1))
+  params.set("size", String(query.size ?? 20))
+  const response = await authenticatedApiRequest(`/api/bins?${params.toString()}`)
+  return (await response.json()) as BinsResponse
+}
+
+export async function getBin(binId: string) {
+  const response = await authenticatedApiRequest(`/api/bins/${encodeURIComponent(binId)}`)
+  return (await response.json()) as BinRecord
+}
+
+export async function createBin(bin: BinCreateInput) {
+  const response = await authenticatedApiRequest("/api/bins", {
+    method: "POST",
+    body: JSON.stringify(bin),
+  })
+  return (await response.json()) as BinRecord
+}
+
+export async function updateBin(binId: string, changes: BinUpdateInput) {
+  const response = await authenticatedApiRequest(`/api/bins/${encodeURIComponent(binId)}`, {
+    method: "PATCH",
+    body: JSON.stringify(changes),
+  })
+  return (await response.json()) as BinRecord
+}
+
+export async function deleteBin(binId: string) {
+  await authenticatedApiRequest(`/api/bins/${encodeURIComponent(binId)}`, {
+    method: "DELETE",
+  })
 }
 
 export async function login(loginName: string, password: string, rememberMe: boolean) {
