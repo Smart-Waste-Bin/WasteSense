@@ -1,5 +1,6 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { Dashboard } from "./pages/dashboard";
+import { Bins } from "./pages/bins";
 import { Navbar } from "./components/dashboard/navbar";
 import { Sidebar } from "./components/dashboard/sidebar";
 import { Settings } from "./pages/settings";
@@ -72,7 +73,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/live-map" element={<Dashboard />} />
-          <Route path="/bins" element={<Dashboard />} />
+          <Route path="/bins" element={<Bins userRole={user.role} />} />
           <Route path="/alerts" element={<Dashboard />} />
           <Route path="/routes" element={<Dashboard />} />
           <Route path="/live-tracking" element={<Dashboard />} />

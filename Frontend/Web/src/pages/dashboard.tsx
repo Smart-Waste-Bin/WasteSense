@@ -1,42 +1,11 @@
+import { useEffect, useState } from "react";
 import { Map, Route } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { MetricCard } from "../components/dashboard/metric-card";
 import { CampusMap } from "../components/dashboard/campus-map";
 import { ActiveCard } from "../components/dashboard/active-card";
 import { StatusAlerts, type BinStatus, type StatusAlert } from "./../components/dashboard/status-alerts";
-
-const metrics = [
-  {
-    title: "Total bins",
-    value: "10",
-    change: "9",
-    suffix: "reporting",
-  },
-  {
-    title: "Need collection",
-    value: "5",
-    change: "2",
-    suffix: "urgent",
-  },
-  {
-    title: "Offline sensors",
-    value: "1",
-    change: "",
-    suffix: "Pharmacy block",
-  },
-  {
-    title: "Collection today",
-    value: "12",
-    change: "+3",
-    suffix: "vs yesterday",
-  },
-  {
-    title: "Distance saved this week",
-    value: "18.4 km",
-    change: "32%",
-    suffix: "less than fixed route",
-  },
-];
+import { getOverviewStats, type OverviewStats } from "../auth";
 
 const statusBins: BinStatus[] = [
   {
@@ -92,7 +61,68 @@ const statusAlerts: StatusAlert[] = [
   },
 ];
 
+function formatDistanceSaved(distanceMeters: number) {
+  const distanceKm = (distanceMeters / 1000).toFixed(2).replace(/\.?0+$/, "");
+  return `${distanceKm} km`;
+}
+
 function Dashboard() {
+  const [stats, setStats] = useState<OverviewStats | null>(null);
+  const [statsError, setStatsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    getOverviewStats()
+      .then((overviewStats) => {
+        if (isCurrent) setStats(overviewStats);
+      })
+      .catch((error: unknown) => {
+        if (isCurrent) {
+          setStatsError(
+            error instanceof Error ? error.message : "Unable to load overview data.",
+          );
+        }
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, []);
+
+  const metrics = [
+    {
+      title: "Total bins",
+      value: stats ? String(stats.total_bins) : "—",
+      change: stats ? String(Math.max(0, stats.total_bins - stats.offline)) : "",
+      suffix: "reporting",
+    },
+    {
+      title: "Need collection",
+      value: stats ? String(stats.needing_collection) : "—",
+      change: "",
+      suffix: "due or urgent",
+    },
+    {
+      title: "Offline sensors",
+      value: stats ? String(stats.offline) : "—",
+      change: "",
+      suffix: "currently offline",
+    },
+    {
+      title: "Collection today",
+      value: stats ? String(stats.collections_today) : "—",
+      change: "",
+      suffix: "completed",
+    },
+    {
+      title: "Distance saved this week",
+      value: stats ? formatDistanceSaved(stats.distance_saved_week_m) : "—",
+      change: "",
+      suffix: "this week",
+    },
+  ];
+
   return (
     <main className="mx-auto w-full max-w-[1440px] min-w-0 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
       <div className="mb-8 flex flex-col items-start justify-between gap-5 sm:flex-row sm:items-end">
@@ -101,7 +131,11 @@ function Dashboard() {
             Good morning, Jordan <span aria-hidden="true">👋</span>
           </h2>
           <p className="mt-2 text-sm text-slate-500">
-            Monday, 12 February 2025 • 5 bins need collection today
+            {stats
+              ? `${stats.needing_collection} bins need collection today`
+              : statsError
+                ? "Overview data unavailable"
+                : "Loading overview data..."}
           </p>
         </div>
         <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
@@ -117,6 +151,14 @@ function Dashboard() {
           </Button>
         </div>
       </div>
+      {statsError && (
+        <p
+          role="alert"
+          className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700"
+        >
+          Could not load overview stats: {statsError}
+        </p>
+      )}
       <section className="grid gap-4 sm:grid-cols-3 xl:grid-cols-5">
         {metrics.map((metric) => (
           <MetricCard key={metric.title} {...metric} />

@@ -19,11 +19,13 @@ function MetricCard({ title, value, change, suffix }: MetricCardProps) {
         </div>
       </div>
       <p className="mt-4 text-xs font-small text-slate-500">
-        <span
-          className={`mr-1 font-bold ${change.startsWith("-") ? "text-rose-500" : "text-emerald-600"}`}
-        >
-          {change}
-        </span>
+        {change && (
+          <span
+            className={`mr-1 font-bold ${change.startsWith("-") ? "text-rose-500" : "text-emerald-600"}`}
+          >
+            {change}
+          </span>
+        )}
         {suffix}
       </p>
     </Card>
