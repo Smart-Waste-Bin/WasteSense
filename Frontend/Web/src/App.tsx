@@ -73,7 +73,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/live-map" element={<Dashboard />} />
-          <Route path="/bins" element={<Bins />} />
+          <Route path="/bins" element={<Bins userRole={user.role} />} />
           <Route path="/alerts" element={<Dashboard />} />
           <Route path="/routes" element={<Dashboard />} />
           <Route path="/live-tracking" element={<Dashboard />} />
