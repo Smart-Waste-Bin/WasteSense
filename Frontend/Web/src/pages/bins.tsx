@@ -1,12 +1,8 @@
-import { useEffect, useState, type FormEvent } from "react";
-import {
-  createBin,
-  deleteBin,
-  getBin,
-  getBins,
-  updateBin,
-  type BinRecord,
-} from "@/auth";
+import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { deleteBin, getBin, getBins, type BinRecord } from "@/auth";
+import { BinFormDrawer } from "@/components/bins/bin-form-drawer";
+import { BINS_QUERY_KEY } from "@/lib/bins";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -32,27 +28,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Eye, PenLine, Trash } from "lucide-react";
+import { Eye, MoreHorizontal, PenLine, Trash } from "lucide-react";
+import { STATUS_THEME, type BinStatus } from "@/lib/theme";
+import { formatRelativeTime } from "@/lib/relative-time";
+import type { BinUpdate } from "@/lib/bins";
+import { useLiveEvents } from "@/hooks/use-live-events";
 
 type BinsProps = {
   userRole: string;
 };
 
 type DialogMode = "create" | "edit" | "view" | "delete" | null;
-
-type BinFormValues = {
-  id: string;
-  name: string;
-  lat: string;
-  lng: string;
-  depth_cm: string;
-  volume_l: string;
-  sensor_id: string;
-  is_physical: boolean;
-  maintenance: boolean;
-  due_threshold: string;
-  urgent_threshold: string;
-};
 
 const PAGE_SIZE = 20;
 
@@ -74,42 +60,29 @@ const sortOptions = [
   { value: "-last_seen_at", label: "Last seen: newest" },
 ];
 
-function emptyForm(): BinFormValues {
-  return {
-    id: "",
-    name: "",
-    lat: "",
-    lng: "",
-    depth_cm: "",
-    volume_l: "",
-    sensor_id: "",
-    is_physical: false,
-    maintenance: false,
-    due_threshold: "",
-    urgent_threshold: "",
-  };
+function FillLevel({ fill, status }: { fill: number | null; status: string }) {
+  const color = STATUS_THEME[status as BinStatus]?.color ?? "#888780";
+  return (
+    <div className="flex items-center gap-3">
+      <div className="h-1.5 w-24 overflow-hidden rounded-full bg-slate-100">
+        {fill !== null && (
+          <div
+            className="h-full rounded-full"
+            style={{ width: `${Math.min(100, Math.max(0, fill))}%`, backgroundColor: color }}
+          />
+        )}
+      </div>
+      <span className="w-10 text-right text-sm tabular-nums">
+        {fill === null ? "—" : `${Math.round(fill)}%`}
+      </span>
+    </div>
+  );
 }
 
-function formFromBin(bin: BinRecord): BinFormValues {
-  return {
-    id: bin.id,
-    name: bin.name,
-    lat: String(bin.location.lat),
-    lng: String(bin.location.lng),
-    depth_cm: String(bin.depth_cm),
-    volume_l: String(bin.volume_l),
-    sensor_id: bin.sensor_id ?? "",
-    is_physical: bin.is_physical,
-    maintenance: bin.maintenance,
-    due_threshold: bin.due_threshold === null ? "" : String(bin.due_threshold),
-    urgent_threshold: bin.urgent_threshold === null ? "" : String(bin.urgent_threshold),
-  };
-}
-
-function formatLastSeen(value: string | null) {
+function formatLastSeen(value: string | null, now: number) {
   if (!value) return "Never";
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "—" : date.toLocaleString();
+  return Number.isNaN(date.getTime()) ? "—" : formatRelativeTime(value, now);
 }
 
 function Bins({ userRole }: BinsProps) {
@@ -125,10 +98,36 @@ function Bins({ userRole }: BinsProps) {
   const [error, setError] = useState<string | null>(null);
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
   const [selectedBin, setSelectedBin] = useState<BinRecord | null>(null);
-  const [form, setForm] = useState<BinFormValues>(emptyForm);
   const [dialogError, setDialogError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
+  const queryClient = useQueryClient();
+
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => setNow(Date.now()), 10_000);
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  useLiveEvents(
+    (event) => {
+      if (event.type !== "bin_updated") return;
+      const update = event.data as BinUpdate;
+      setBins((current) =>
+        current.map((bin) => (bin.id === update.id ? { ...bin, ...update } : bin)),
+      );
+      setSelectedBin((current) =>
+        current && current.id === update.id ? { ...current, ...update } : current,
+      );
+    },
+    () => setRefreshKey((current) => current + 1),
+  );
+
+  const refreshBins = () => {
+    setRefreshKey((current) => current + 1);
+    void queryClient.invalidateQueries({ queryKey: BINS_QUERY_KEY });
+  };
 
   useEffect(() => {
     let isCurrent = true;
@@ -160,13 +159,6 @@ function Bins({ userRole }: BinsProps) {
     };
   }, [query, status, sort, page, refreshKey]);
 
-  const updateForm = <K extends keyof BinFormValues,>(
-    key: K,
-    value: BinFormValues[K],
-  ) => {
-    setForm((current) => ({ ...current, [key]: value }));
-  };
-
   const closeDialog = () => {
     if (isSubmitting) return;
     setDialogMode(null);
@@ -191,52 +183,6 @@ function Bins({ userRole }: BinsProps) {
     }
   };
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setIsSubmitting(true);
-    setDialogError(null);
-
-    const input = {
-      name: form.name.trim(),
-      location: { lat: Number(form.lat), lng: Number(form.lng) },
-      depth_cm: Number(form.depth_cm),
-      volume_l: Number(form.volume_l),
-      sensor_id: form.sensor_id.trim() || null,
-      is_physical: form.is_physical,
-      due_threshold: form.due_threshold.trim() ? Number(form.due_threshold) : null,
-      urgent_threshold: form.urgent_threshold.trim()
-        ? Number(form.urgent_threshold)
-        : null,
-    };
-
-    try {
-      if (dialogMode === "create") {
-        await createBin({
-          ...input,
-          ...(form.id.trim() ? { id: form.id.trim() } : {}),
-        });
-        setPage(1);
-      } else if (dialogMode === "edit" && selectedBin) {
-        await updateBin(selectedBin.id, {
-          ...input,
-          maintenance: form.maintenance,
-        });
-      } else {
-        return;
-      }
-
-      setDialogMode(null);
-      setSelectedBin(null);
-      setRefreshKey((current) => current + 1);
-    } catch (saveError) {
-      setDialogError(
-        saveError instanceof Error ? saveError.message : "Unable to save this bin.",
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   const handleDeleteBin = async () => {
     if (!selectedBin) return;
     setIsSubmitting(true);
@@ -245,6 +191,7 @@ function Bins({ userRole }: BinsProps) {
       await deleteBin(selectedBin.id);
       setDialogMode(null);
       setSelectedBin(null);
+      void queryClient.invalidateQueries({ queryKey: BINS_QUERY_KEY });
       if (bins.length === 1 && page > 1) {
         setPage((current) => current - 1);
       } else {
@@ -281,7 +228,6 @@ function Bins({ userRole }: BinsProps) {
           <Button
             className="rounded-xl"
             onClick={() => {
-              setForm(emptyForm());
               setSelectedBin(null);
               setDialogError(null);
               setDialogMode("create");
@@ -364,7 +310,6 @@ function Bins({ userRole }: BinsProps) {
             <TableRow>
               <TableHead>Bin ID</TableHead>
               <TableHead>Name</TableHead>
-              <TableHead>Location</TableHead>
               <TableHead>Fill Level</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Battery</TableHead>
@@ -378,73 +323,75 @@ function Bins({ userRole }: BinsProps) {
                 <TableCell className="font-medium">{bin.id}</TableCell>
                 <TableCell>{bin.name}</TableCell>
                 <TableCell>
-                  {bin.location.lat.toFixed(5)}, {bin.location.lng.toFixed(5)}
+                  <FillLevel fill={bin.last_fill} status={bin.status} />
                 </TableCell>
-                <TableCell>{bin.last_fill === null ? "—" : `${bin.last_fill}%`}</TableCell>
                 <TableCell className="capitalize">{bin.status.replace("_", " ")}</TableCell>
                 <TableCell>
                   {bin.last_battery === null ? "—" : `${bin.last_battery}%`}
                 </TableCell>
-                <TableCell>{formatLastSeen(bin.last_seen_at)}</TableCell>
+                <TableCell
+                  title={bin.last_seen_at ? new Date(bin.last_seen_at).toLocaleString() : undefined}
+                >
+                  {formatLastSeen(bin.last_seen_at, now)}
+                </TableCell>
                 <TableCell>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="size-8 p-0"
-                      aria-label={`View ${bin.id}`}
-                      title="View bin"
-                      onClick={() => void handleViewBin(bin)}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      render={
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          className="size-8 p-0"
+                          aria-label={`Actions for ${bin.id}`}
+                        />
+                      }
                     >
-                      <Eye size={16} />
-                    </Button>
-                    {canManageBins && (
-                      <>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="size-8 p-0"
-                          aria-label={`Edit ${bin.id}`}
-                          title="Edit bin"
-                          onClick={() => {
-                            setSelectedBin(bin);
-                            setForm(formFromBin(bin));
-                            setDialogError(null);
-                            setDialogMode("edit");
-                          }}
-                        >
-                          <PenLine size={16} />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="size-8 p-0"
-                          aria-label={`Delete ${bin.id}`}
-                          title="Delete bin"
-                          onClick={() => {
-                            setSelectedBin(bin);
-                            setDialogError(null);
-                            setDialogMode("delete");
-                          }}
-                        >
-                          <Trash size={16} />
-                        </Button>
-                      </>
-                    )}
-                  </div>
+                      <MoreHorizontal size={16} />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuGroup>
+                        <DropdownMenuItem onClick={() => void handleViewBin(bin)}>
+                          <Eye /> View
+                        </DropdownMenuItem>
+                        {canManageBins && (
+                          <>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSelectedBin(bin);
+                                setDialogError(null);
+                                setDialogMode("edit");
+                              }}
+                            >
+                              <PenLine /> Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              variant="destructive"
+                              onClick={() => {
+                                setSelectedBin(bin);
+                                setDialogError(null);
+                                setDialogMode("delete");
+                              }}
+                            >
+                              <Trash /> Delete
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuGroup>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </TableCell>
               </TableRow>
             ))}
             {!isLoading && bins.length === 0 && !error && (
               <TableRow>
-                <TableCell colSpan={8} className="py-10 text-center text-slate-500">
+                <TableCell colSpan={7} className="py-10 text-center text-slate-500">
                   No bins match your search.
                 </TableCell>
               </TableRow>
             )}
             {isLoading && bins.length === 0 && (
               <TableRow>
-                <TableCell colSpan={8} className="py-10 text-center text-slate-500">
+                <TableCell colSpan={7} className="py-10 text-center text-slate-500">
                   Loading bins...
                 </TableCell>
               </TableRow>
@@ -478,7 +425,7 @@ function Bins({ userRole }: BinsProps) {
       </div>
 
       <Dialog
-        open={dialogMode !== null}
+        open={dialogMode === "view" || dialogMode === "delete"}
         onOpenChange={(open) => {
           if (!open) closeDialog();
         }}
@@ -516,7 +463,7 @@ function Bins({ userRole }: BinsProps) {
                   <dt className="text-slate-500">Sensor ID</dt>
                   <dd>{selectedBin.sensor_id ?? "Not assigned"}</dd>
                   <dt className="text-slate-500">Last seen</dt>
-                  <dd>{formatLastSeen(selectedBin.last_seen_at)}</dd>
+                  <dd>{formatLastSeen(selectedBin.last_seen_at, now)}</dd>
                   <dt className="text-slate-500">Maintenance</dt>
                   <dd>{selectedBin.maintenance ? "On" : "Off"}</dd>
                 </dl>
@@ -527,159 +474,13 @@ function Bins({ userRole }: BinsProps) {
             </>
           )}
 
-          {(dialogMode === "create" || dialogMode === "edit") && (
-            <>
-              <DialogHeader>
-                <DialogTitle>{dialogMode === "create" ? "Add bin" : "Edit bin"}</DialogTitle>
-                <DialogDescription>
-                  Enter the bin's location and capacity details.
-                </DialogDescription>
-              </DialogHeader>
-              <form id="bin-form" onSubmit={handleSubmit} className="space-y-4">
-                {dialogMode === "create" && (
-                  <label className="block space-y-1.5 text-sm font-medium">
-                    Bin ID (optional)
-                    <Input
-                      value={form.id}
-                      placeholder="Auto-assign if blank"
-                      onChange={(event) => updateForm("id", event.target.value)}
-                    />
-                  </label>
-                )}
-                <label className="block space-y-1.5 text-sm font-medium">
-                  Name
-                  <Input
-                    required
-                    value={form.name}
-                    onChange={(event) => updateForm("name", event.target.value)}
-                  />
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <label className="block space-y-1.5 text-sm font-medium">
-                    Latitude
-                    <Input
-                      required
-                      type="number"
-                      min="-90"
-                      max="90"
-                      step="any"
-                      value={form.lat}
-                      onChange={(event) => updateForm("lat", event.target.value)}
-                    />
-                  </label>
-                  <label className="block space-y-1.5 text-sm font-medium">
-                    Longitude
-                    <Input
-                      required
-                      type="number"
-                      min="-180"
-                      max="180"
-                      step="any"
-                      value={form.lng}
-                      onChange={(event) => updateForm("lng", event.target.value)}
-                    />
-                  </label>
-                  <label className="block space-y-1.5 text-sm font-medium">
-                    Depth (cm)
-                    <Input
-                      required
-                      type="number"
-                      min="0.01"
-                      step="any"
-                      value={form.depth_cm}
-                      onChange={(event) => updateForm("depth_cm", event.target.value)}
-                    />
-                  </label>
-                  <label className="block space-y-1.5 text-sm font-medium">
-                    Capacity (L)
-                    <Input
-                      required
-                      type="number"
-                      min="0.01"
-                      step="any"
-                      value={form.volume_l}
-                      onChange={(event) => updateForm("volume_l", event.target.value)}
-                    />
-                  </label>
-                </div>
-                <label className="block space-y-1.5 text-sm font-medium">
-                  Sensor ID (optional)
-                  <Input
-                    value={form.sensor_id}
-                    onChange={(event) => updateForm("sensor_id", event.target.value)}
-                  />
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <label className="block space-y-1.5 text-sm font-medium">
-                    Due threshold (%)
-                    <Input
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="any"
-                      value={form.due_threshold}
-                      onChange={(event) => updateForm("due_threshold", event.target.value)}
-                    />
-                  </label>
-                  <label className="block space-y-1.5 text-sm font-medium">
-                    Urgent threshold (%)
-                    <Input
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="any"
-                      value={form.urgent_threshold}
-                      onChange={(event) => updateForm("urgent_threshold", event.target.value)}
-                    />
-                  </label>
-                </div>
-                <div className="flex flex-wrap gap-5 text-sm">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={form.is_physical}
-                      onChange={(event) => updateForm("is_physical", event.target.checked)}
-                    />
-                    Physical bin
-                  </label>
-                  {dialogMode === "edit" && (
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={form.maintenance}
-                        onChange={(event) => updateForm("maintenance", event.target.checked)}
-                      />
-                      Maintenance mode
-                    </label>
-                  )}
-                </div>
-                {dialogError && (
-                  <p role="alert" className="text-sm text-red-700">{dialogError}</p>
-                )}
-              </form>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={closeDialog} disabled={isSubmitting}>
-                  Cancel
-                </Button>
-                <Button type="submit" form="bin-form" disabled={isSubmitting}>
-                  {isSubmitting
-                    ? "Saving..."
-                    : dialogMode === "create"
-                      ? "Create bin"
-                      : "Save changes"}
-                </Button>
-              </DialogFooter>
-            </>
-          )}
-
           {dialogMode === "delete" && selectedBin && (
             <>
               <DialogHeader>
-                <DialogTitle>Delete bin?</DialogTitle>
-                <DialogDescription>
-                  {selectedBin.id} ({selectedBin.name}) will be removed from the active bins list.
-                  Existing readings will be kept.
-                </DialogDescription>
+                <DialogTitle>
+                  Delete {selectedBin.id} {selectedBin.name}?
+                </DialogTitle>
+                <DialogDescription>This cannot be undone.</DialogDescription>
               </DialogHeader>
               {dialogError && (
                 <p role="alert" className="text-sm text-red-700">{dialogError}</p>
@@ -694,13 +495,25 @@ function Bins({ userRole }: BinsProps) {
                   onClick={() => void handleDeleteBin()}
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? "Deleting..." : "Delete bin"}
+                  {isSubmitting ? "Deleting..." : "Delete"}
                 </Button>
               </DialogFooter>
             </>
           )}
         </DialogContent>
       </Dialog>
+
+      <BinFormDrawer
+        open={dialogMode === "create" || dialogMode === "edit"}
+        bin={dialogMode === "edit" ? selectedBin : null}
+        onClose={closeDialog}
+        onSaved={() => {
+          if (dialogMode === "create") setPage(1);
+          setDialogMode(null);
+          setSelectedBin(null);
+          refreshBins();
+        }}
+      />
     </main>
   );
 }

@@ -72,13 +72,13 @@ function App() {
           user={user}
         />
         <Routes>
-          <Route path="/" element={<Dashboard />} />
+          <Route path="/" element={<Dashboard userName={user.name} />} />
           <Route path="/live-map" element={<LiveMap />} />
           <Route path="/bins" element={<Bins userRole={user.role} />} />
-          <Route path="/alerts" element={<Dashboard />} />
-          <Route path="/routes" element={<Dashboard />} />
-          <Route path="/live-tracking" element={<Dashboard />} />
-          <Route path="/collectors" element={<Dashboard />} />
+          <Route path="/alerts" element={<Dashboard userName={user.name} />} />
+          <Route path="/routes" element={<Dashboard userName={user.name} />} />
+          <Route path="/live-tracking" element={<Dashboard userName={user.name} />} />
+          <Route path="/collectors" element={<Dashboard userName={user.name} />} />
           <Route
             path="/settings"
             element={<Settings user={user} onProfileUpdate={setUser} />}
