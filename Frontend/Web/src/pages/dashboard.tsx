@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Map, Route } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import { MetricCard } from "../components/dashboard/metric-card";
 import { CampusMap } from "../components/dashboard/campus-map";
@@ -49,7 +50,13 @@ function formatDistanceSaved(distanceMeters: number) {
   return `${distanceKm} km`;
 }
 
-function Dashboard() {
+type DashboardProps = {
+  userName: string;
+};
+
+function Dashboard({ userName }: DashboardProps) {
+  const firstName = userName.trim().split(/\s+/)[0];
+  const navigate = useNavigate();
   const { data: bins = [] } = useLiveBins();
   const statusBins = countByStatus(bins);
 
@@ -114,7 +121,7 @@ function Dashboard() {
       <div className="mb-8 flex flex-col items-start justify-between gap-5 sm:flex-row sm:items-end">
         <div className="min-w-0">
           <h2 className="text-3xl font-bold tracking-tight text-slate-950">
-            Good morning, Jordan <span aria-hidden="true">👋</span>
+            Good morning, {firstName} <span aria-hidden="true">👋</span>
           </h2>
           <p className="mt-2 text-sm text-slate-500">
             {stats
@@ -128,6 +135,7 @@ function Dashboard() {
           <Button
             variant="outline"
             className="w-full gap-2 rounded-xl font-bold text-slate-600 sm:w-auto"
+            onClick={() => navigate("/live-map")}
           >
             <Map size={16} /> Open live map
           </Button>
