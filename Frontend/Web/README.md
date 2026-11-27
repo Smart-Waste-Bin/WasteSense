@@ -33,6 +33,9 @@ different address, create `Frontend/Web/.env.local` and add:
 VITE_API_URL=http://localhost:8000
 ```
 
+All settings, including the live map tiles and start position, are listed in
+[`.env.example`](./.env.example).
+
 For the account setup and a plain-language explanation of sign-in, see
 [Login authentication guide](./LOGIN_AUTH_GUIDE.md).
 
@@ -58,6 +61,17 @@ web/
 ├── tsconfig*.json    # TypeScript configuration
 └── vite.config.ts    # Vite, React, Tailwind, and React Compiler setup
 ```
+
+## Live map tiles
+
+The live map uses OpenStreetMap tiles for the base map only. All bin data comes
+from our backend. The OpenStreetMap tile servers are free but limited, so we
+follow their [tile usage policy](https://operations.osmfoundation.org/policies/tiles/):
+the attribution is always shown, there is no bulk downloading or caching of
+tiles, and zoom stops at 19.
+
+For production, or if traffic grows, switch to a commercial tile provider or
+our own tile server by changing `VITE_TILE_URL` and `VITE_TILE_ATTRIBUTION`.
 
 ## Development workflow
 
